@@ -1,6 +1,9 @@
 {
   "name": "memoboost",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "version": "0.0.0",
   "type": "module",
   "homepage": "https://agahlya1812.github.io/memoboost",
