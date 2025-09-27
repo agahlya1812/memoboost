@@ -19,7 +19,17 @@ const ALLOWED_MASTERY = new Set(['unknown', 'review', 'known'])
 const AUTH_HEADER = 'x-user-id'
 const PASSWORD_SALT = process.env.MEMOBOOST_SALT || 'memoboost-salt'
 
-app.use(cors())
+app.use(cors({
+  origin: [
+    'http://localhost:5176',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'https://agahlya1812.github.io',
+    'https://agahlya1812.github.io/memoboost'
+  ],
+  credentials: true
+}))
 app.use(express.json())
 
 const normalizeCategoryName = (name) => name.trim()
@@ -558,6 +568,10 @@ app.delete('/api/categories/:id', async (req, res) => {
     console.error('Failed to delete category', error)
     res.status(500).json({ error: 'Suppression du dossier impossible.' })
   }
+})
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'MemoBoost API is running' })
 })
 
 app.use((req, res) => {
