@@ -35,3 +35,6 @@ clean/
 
 # Backup files
 backup_icons/
+
+# Large image files (use Git LFS or optimize)
+public/*.png
