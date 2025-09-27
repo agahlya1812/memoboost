@@ -19,31 +19,40 @@ const ALLOWED_MASTERY = new Set(['unknown', 'review', 'known'])
 const AUTH_HEADER = 'x-user-id'
 const PASSWORD_SALT = process.env.MEMOBOOST_SALT || 'memoboost-salt'
 
-// CORS avec liste blanche
+// ────── CORS dynamique ──────
+const allowedOrigins = [
+  'http://localhost:5176',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'https://agahlya1812.github.io',
+  'https://agahlya1812.github.io/memoboost'
+]
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5176',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:5175',
-      'https://agahlya1812.github.io',
-      'https://agahlya1812.github.io/memoboost'
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true) // permet Postman/curl
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      } else {
+        return callback(new Error('Not allowed by CORS'))
+      }
+    },
     credentials: true
   })
 )
 
 app.use(express.json())
 
-// … tout ton code de normalisation et de routes reste identique …
+// … toutes tes fonctions normalize*, hashPassword, authenticate, assignLegacyContent, etc. …
 
-// (je n’ai rien modifié à tes fonctions normalize*, authenticate, etc.)
-
-// Route health
+// Exemple : route health
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'MemoBoost API is running' })
 })
+
+// … toutes tes routes API (auth/register, auth/login, state, cards, categories…) inchangées …
 
 // Route 404 par défaut
 app.use((req, res) => {
@@ -52,5 +61,5 @@ app.use((req, res) => {
 
 app.listen(PORT, async () => {
   await ensureStore()
-  console.log(`MemoBoost API en ecoute sur http://localhost:${PORT}`)
+  console.log(`MemoBoost API en écoute sur http://localhost:${PORT}`)
 })
