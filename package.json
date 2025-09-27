@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "deploy": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
     "cors": "^2.8.5",
