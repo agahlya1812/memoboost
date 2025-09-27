@@ -19,6 +19,7 @@ const ALLOWED_MASTERY = new Set(['unknown', 'review', 'known'])
 const AUTH_HEADER = 'x-user-id'
 const PASSWORD_SALT = process.env.MEMOBOOST_SALT || 'memoboost-salt'
 
+<<<<<<< HEAD
 app.use(cors({
   origin: [
     'http://localhost:5176',
@@ -30,6 +31,9 @@ app.use(cors({
   ],
   credentials: true
 }))
+=======
+app.use(cors())
+>>>>>>> a2e33565188feef5fcf597a7844cb430c821ecaa
 app.use(express.json())
 
 const normalizeCategoryName = (name) => name.trim()
@@ -570,10 +574,13 @@ app.delete('/api/categories/:id', async (req, res) => {
   }
 })
 
+<<<<<<< HEAD
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'MemoBoost API is running' })
 })
 
+=======
+>>>>>>> a2e33565188feef5fcf597a7844cb430c821ecaa
 app.use((req, res) => {
   res.status(404).json({ error: 'Route inconnue.' })
 })
