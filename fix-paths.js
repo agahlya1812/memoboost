@@ -3,18 +3,24 @@
 import fs from 'fs';
 import path from 'path';
 
-// Script pour corriger les chemins dans index.html pour GitHub Pages
+// Script pour vérifier les chemins dans index.html
 const distDir = './dist';
 const indexPath = path.join(distDir, 'index.html');
 
 if (fs.existsSync(indexPath)) {
   let content = fs.readFileSync(indexPath, 'utf8');
   
-  // Remplacer les chemins absolus par des chemins relatifs
-  content = content.replace(/\/memoboost\//g, './');
+  console.log('📄 Contenu de index.html:');
+  console.log(content);
   
-  fs.writeFileSync(indexPath, content);
-  console.log('✅ Chemins corrigés dans index.html');
+  // Vérifier si les fichiers existent
+  const assetsDir = path.join(distDir, 'assets');
+  if (fs.existsSync(assetsDir)) {
+    const files = fs.readdirSync(assetsDir);
+    console.log('📁 Fichiers dans assets/:', files);
+  }
+  
+  console.log('✅ Vérification terminée');
 } else {
   console.log('❌ index.html non trouvé');
 }

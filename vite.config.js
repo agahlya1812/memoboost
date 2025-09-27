@@ -6,12 +6,7 @@ export default defineConfig({
   base: '/memoboost/',
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        assetFileNames: 'assets/[name].[hash][extname]'
-      }
-    }
+    assetsDir: 'assets'
   },
   server: {
     proxy: {
