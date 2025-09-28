@@ -19,7 +19,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
       process.env.NODE_ENV === 'production' 
-        ? 'https://memoboost-api-xxxx.onrender.com/api' 
+        ? 'https://memoboost-api.onrender.com/api' 
         : '/api'
     )
   }
