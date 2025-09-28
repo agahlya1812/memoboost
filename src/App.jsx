@@ -943,7 +943,7 @@ function App() {
     <div className="app">
       <header className="app-topbar">
         <div className="app-brand">
-          <img src={`/logo.png?v=${Date.now()}`} alt="MemoBoost" className="app-logo" />
+          <img src={`${import.meta.env.BASE_URL}logo.png?v=${Date.now()}`} alt="MemoBoost" className="app-logo" />
         </div>
         <div className="app-topbar-right">
           <div className="app-search">
@@ -970,7 +970,7 @@ function App() {
                 onClick={openImportExportModal}
                 title="Import/Export des données"
               >
-                <img src="/icon-json.png" alt="Import/Export" className="app-import-export-icon" />
+                <img src={`${import.meta.env.BASE_URL}icon-json.png`} alt="Import/Export" className="app-import-export-icon" />
               </button>
               <span className="app-user-email">{currentUser.email}</span>
               <button type="button" className="app-user-logout" onClick={handleLogout}>

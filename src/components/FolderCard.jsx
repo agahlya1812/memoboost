@@ -71,7 +71,7 @@ function FolderCard({ folder, onOpen, onEdit, onDelete, variant = 'folder' }) {
   }
 
   const colorKey = envelopeIconMap[folder.color] ? envelopeIconMap[folder.color] : envelopeIconMap.blue
-  const envelopeIcon = `/icon-enveloppe-${colorKey}.png?v=${Date.now()}`
+  const envelopeIcon = `${import.meta.env.BASE_URL}icon-enveloppe-${colorKey}.png?v=${Date.now()}`
 
   const cardClassName = variant === 'folder' ? 'folder-card' : `folder-card folder-card--${variant}`
   
@@ -88,7 +88,7 @@ function FolderCard({ folder, onOpen, onEdit, onDelete, variant = 'folder' }) {
   }
   
   const folderColorKey = folderIconMap[folder.color] ? folderIconMap[folder.color] : folderIconMap.blue
-  const folderIcon = `/icon-dossier-${folderColorKey}.png?v=${Date.now()}`
+  const folderIcon = `${import.meta.env.BASE_URL}icon-dossier-${folderColorKey}.png?v=${Date.now()}`
   
   const iconSrc = variant === 'envelope' ? envelopeIcon : folderIcon
 
