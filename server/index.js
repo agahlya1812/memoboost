@@ -20,26 +20,12 @@ const AUTH_HEADER = 'x-user-id'
 const PASSWORD_SALT = process.env.MEMOBOOST_SALT || 'memoboost-salt'
 
 // Configuration CORS pour GitHub Pages
-const allowedOrigins = [
-  'http://localhost:5176',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'https://agahlya1812.github.io',
-  'https://agahlya1812.github.io/memoboost'
-]
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true) // permet Postman/curl
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      } else {
-        return callback(new Error('Not allowed by CORS'))
-      }
-    },
-    credentials: true
+    origin: true, // Permet toutes les origines
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id']
   })
 )
 app.use(express.json())
