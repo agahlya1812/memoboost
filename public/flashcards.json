@@ -1,0 +1,50 @@
+[
+  {
+    "id": "js-let",
+    "category": "JavaScript",
+    "question": "Quel mot-cle definit une variable a portee de bloc ?",
+    "answer": "let"
+  },
+  {
+    "id": "js-arrow",
+    "category": "JavaScript",
+    "question": "Comment ecrit-on une fonction flechee qui retourne la somme de a et b ?",
+    "answer": "const sum = (a, b) => a + b;"
+  },
+  {
+    "id": "react-state",
+    "category": "React",
+    "question": "Quel hook permet de gerer l'etat local d'un composant fonctionnel ?",
+    "answer": "useState"
+  },
+  {
+    "id": "react-effect",
+    "category": "React",
+    "question": "Quel hook declenche une fonction a chaque changement de dependance ?",
+    "answer": "useEffect"
+  },
+  {
+    "id": "css-flex",
+    "category": "CSS",
+    "question": "Quelle propriete active un conteneur flexbox ?",
+    "answer": "display: flex;"
+  },
+  {
+    "id": "css-media",
+    "category": "CSS",
+    "question": "Quelle regle CSS permet d'appliquer un style selon la largeur de l'ecran ?",
+    "answer": "@media"
+  },
+  {
+    "id": "html-semantic",
+    "category": "HTML",
+    "question": "Quel element HTML represente le contenu principal ?",
+    "answer": "<main>"
+  },
+  {
+    "id": "git-commit",
+    "category": "Git",
+    "question": "Quelle commande enregistre les changements dans l'historique ?",
+    "answer": "git commit"
+  }
+]
