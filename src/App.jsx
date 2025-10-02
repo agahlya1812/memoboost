@@ -21,6 +21,7 @@ import {
 } from './services/api'
 import { DEFAULT_COLOR, PASTEL_COLORS } from './constants/palette'
 import { ensureSlug } from './utils/slug'
+import { readStateFromLocal, writeStateToLocal, mergeServerAndLocal, removeStateFromLocal } from './utils/localBackup'
 import './App.css'
 
 const defaultPanelState = {
@@ -131,8 +132,11 @@ function App() {
 
       try {
         const data = await fetchState()
-        setCards(data.cards || [])
-        setCategories(normalizeCategories(data.categories || []))
+        // Fusionner avec le local si le serveur renvoie vide
+        const local = readStateFromLocal(currentUser.id)
+        const merged = mergeServerAndLocal(data, local)
+        setCards(merged.cards || [])
+        setCategories(normalizeCategories(merged.categories || []))
         if (data.user && currentUser && currentUser.id === data.user.id) {
           if (currentUser.email !== data.user.email || currentUser.name !== data.user.name) {
             setCurrentUser((prev) => ({ ...prev, ...data.user }))
@@ -140,8 +144,19 @@ function App() {
         }
         setError('')
         setStatus('ready')
+        // Sauvegarde locale après succès
+        writeStateToLocal(currentUser.id, { cards: merged.cards || [], categories: merged.categories || [] })
         return data
       } catch (err) {
+        // Tentative de lecture locale en secours
+        const local = readStateFromLocal(currentUser.id)
+        if (local) {
+          setCards(local.cards || [])
+          setCategories(normalizeCategories(local.categories || []))
+          setError('')
+          setStatus('ready')
+          return { ...local, user: currentUser }
+        }
         const message = err.message || 'Impossible de charger les donnees.'
         setError(message)
         setStatus('error')
@@ -515,6 +530,10 @@ function App() {
       }
 
       await fetchAndSetState({ silent: true })
+      // Après mutations réussies, mettre à jour la sauvegarde locale
+      try {
+        writeStateToLocal(currentUser.id, { cards, categories })
+      } catch (_) {}
 
       if (payload.type === 'flashcard') {
         goToFolder(nextFolderId || null)
@@ -602,6 +621,10 @@ function App() {
         answer: targetCard.answer,
         categoryId: targetCard.categoryId
       })
+      try {
+        const nextCards = (cards || []).map((item) => (item.id === targetCard.id ? { ...item, masteryStatus } : item))
+        writeStateToLocal(currentUser?.id, { cards: nextCards, categories })
+      } catch (_) {}
       if (!silent) {
         setNoticeTone('success')
         setNotice(masteryStatus === 'known' ? 'Carte marquée comme maîtrisée.' : 'Carte à revoir.')
@@ -726,8 +749,12 @@ function App() {
 
   const handleLogout = useCallback(() => {
     const previousEmail = currentUser?.email || authForm.email || ''
+    const previousUserId = currentUser?.id || null
     clearAuthUserId()
     window.localStorage.removeItem(STORAGE_USER_KEY)
+    if (previousUserId) {
+      removeStateFromLocal(previousUserId)
+    }
     stopRevisionSession()
     setCurrentUser(null)
     setPanelState(defaultPanelState)

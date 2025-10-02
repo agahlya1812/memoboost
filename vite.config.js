@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.NODE_ENV === 'production' ? '/memoboost/' : '/',
+  base: process.env.VERCEL
+    ? '/'
+    : (process.env.NODE_ENV === 'production' ? '/memoboost/' : '/'),
   build: {
     outDir: 'dist',
     assetsDir: 'assets'
