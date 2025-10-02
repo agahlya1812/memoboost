@@ -21,7 +21,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
       process.env.NODE_ENV === 'production' 
-        ? 'https://memoboost-3gd77jtgw-agahlya1812s-projects.vercel.app/api' 
+        ? 'https://memoboost-api.onrender.com/api' 
         : '/api'
     )
   }
