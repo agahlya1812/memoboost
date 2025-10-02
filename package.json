@@ -20,7 +20,7 @@
     "db:deploy": "npx prisma migrate deploy",
     "vercel-build": "npm run db:generate && npm run build",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
