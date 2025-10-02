@@ -12,7 +12,12 @@ const AUTH_HEADER = 'x-user-id'
 const PASSWORD_SALT = process.env.MEMOBOOST_SALT || 'memoboost-salt'
 
 app.use(cors({
-  origin: true,
+  origin: [
+    'https://agahlya1812.github.io',
+    'https://agahlya1812.github.io/memoboost',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id']
