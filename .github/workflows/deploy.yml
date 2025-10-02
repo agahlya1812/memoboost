@@ -3,10 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
-<<<<<<< HEAD
   workflow_dispatch:
-=======
->>>>>>> 659d6a234c1f5a2d966335198c728b5d6d6d6db4
 
 permissions:
   contents: read
@@ -27,11 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-<<<<<<< HEAD
           node-version: '20'
-=======
-          node-version: '18'
->>>>>>> 659d6a234c1f5a2d966335198c728b5d6d6d6db4
           cache: 'npm'
           
       - name: Install dependencies
@@ -57,8 +50,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-<<<<<<< HEAD
         uses: actions/deploy-pages@v4
-=======
-        uses: actions/deploy-pages@v4
->>>>>>> 659d6a234c1f5a2d966335198c728b5d6d6d6db4
