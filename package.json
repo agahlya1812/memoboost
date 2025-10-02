@@ -12,22 +12,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/index.js",
-    "server:db": "node server/index-prisma.js",
-    "db:migrate": "npx prisma migrate dev",
-    "db:generate": "npx prisma generate",
-    "db:studio": "npx prisma studio",
-    "db:deploy": "npx prisma migrate deploy",
-    "vercel-build": "npm run db:generate && npm run build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.3",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "pg": "^8.16.3",
-    "prisma": "^6.16.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.28.0"
