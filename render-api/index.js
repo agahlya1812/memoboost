@@ -4,7 +4,15 @@ import cors from 'cors'
 import { createHash } from 'node:crypto'
 
 const app = express()
-const prisma = new PrismaClient()
+
+// Configuration Prisma pour Render
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+})
 
 const ALLOWED_COLORS = new Set(['red', 'orange', 'yellow', 'green', 'blue', 'violet', 'pink', 'gray'])
 const ALLOWED_MASTERY = new Set(['unknown', 'review', 'known'])
@@ -465,6 +473,12 @@ app.get('/api/health', (req, res) => {
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route inconnue.' })
+})
+
+// Démarrage du serveur pour Render
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+  console.log(`MemoBoost API running on port ${PORT}`)
 })
 
 export default app
