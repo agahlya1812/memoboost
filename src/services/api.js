@@ -1,3 +1,5 @@
+import { isSupabaseEnabled, supabase } from './supabaseClient'
+
 let authUserId = null
 
 export function setAuthUserId(userId) {
@@ -56,6 +58,20 @@ async function request(path, options = {}) {
 }
 
 export async function registerUser(payload) {
+  if (isSupabaseEnabled) {
+    const { data, error } = await supabase.auth.signUp({
+      email: payload.email,
+      password: payload.password,
+      options: {
+        data: { name: payload.name || '' }
+      }
+    })
+    if (error) {
+      throw new Error(error.message)
+    }
+    const user = data.user ? { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || '' } : null
+    return user
+  }
   const data = await request('/auth/register', {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -64,6 +80,17 @@ export async function registerUser(payload) {
 }
 
 export async function loginUser(payload) {
+  if (isSupabaseEnabled) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: payload.email,
+      password: payload.password
+    })
+    if (error) {
+      throw new Error(error.message)
+    }
+    const user = data.user ? { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || '' } : null
+    return user
+  }
   const data = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -72,10 +99,72 @@ export async function loginUser(payload) {
 }
 
 export async function fetchState() {
+  if (isSupabaseEnabled) {
+    // Charger catégories et cartes pour l'utilisateur courant
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id || authUserId
+    if (!userId) {
+      return { user: null, cards: [], categories: [] }
+    }
+
+    const [{ data: categories, error: catErr }, { data: cards, error: cardErr }] = await Promise.all([
+      supabase.from('categories').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+      supabase.from('cards').select('*').eq('user_id', userId).order('created_at', { ascending: true })
+    ])
+    if (catErr) throw new Error(catErr.message)
+    if (cardErr) throw new Error(cardErr.message)
+
+    const normalizedCategories = (categories || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      parentId: c.parent_id,
+      color: c.color || 'blue',
+      createdAt: c.created_at,
+      updatedAt: c.updated_at
+    }))
+    const normalizedCards = (cards || []).map((r) => ({
+      id: r.id,
+      question: r.question,
+      answer: r.answer,
+      categoryId: r.category_id,
+      masteryStatus: r.mastery_status || 'unknown',
+      createdAt: r.created_at,
+      updatedAt: r.updated_at
+    }))
+
+    const currentUser = session?.data?.session?.user
+    return {
+      user: currentUser ? { id: currentUser.id, email: currentUser.email, name: currentUser.user_metadata?.name || '' } : null,
+      cards: normalizedCards,
+      categories: normalizedCategories
+    }
+  }
   return request('/state', { method: 'GET' })
 }
 
 export async function createCard(payload) {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id || authUserId
+    if (!userId) throw new Error('Non authentifié')
+    const { data, error } = await supabase.from('cards').insert({
+      user_id: userId,
+      question: payload.question,
+      answer: payload.answer,
+      category_id: payload.categoryId,
+      mastery_status: payload.masteryStatus || 'unknown'
+    }).select('*').single()
+    if (error) throw new Error(error.message)
+    return {
+      id: data.id,
+      question: data.question,
+      answer: data.answer,
+      categoryId: data.category_id,
+      masteryStatus: data.mastery_status || 'unknown',
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
   const data = await request('/cards', {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -84,6 +173,25 @@ export async function createCard(payload) {
 }
 
 export async function updateCard(id, payload) {
+  if (isSupabaseEnabled) {
+    const updates = {
+      question: payload.question,
+      answer: payload.answer,
+      category_id: payload.categoryId,
+      mastery_status: payload.masteryStatus
+    }
+    const { data, error } = await supabase.from('cards').update(updates).eq('id', id).select('*').single()
+    if (error) throw new Error(error.message)
+    return {
+      id: data.id,
+      question: data.question,
+      answer: data.answer,
+      categoryId: data.category_id,
+      masteryStatus: data.mastery_status || 'unknown',
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
   const data = await request(`/cards/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload)
@@ -93,6 +201,19 @@ export async function updateCard(id, payload) {
 
 export async function updateCardStatus(id, masteryStatus, snapshot) {
   try {
+    if (isSupabaseEnabled) {
+      const { data, error } = await supabase.from('cards').update({ mastery_status: masteryStatus }).eq('id', id).select('*').single()
+      if (error) throw new Error(error.message)
+      return {
+        id: data.id,
+        question: data.question,
+        answer: data.answer,
+        categoryId: data.category_id,
+        masteryStatus: data.mastery_status || 'unknown',
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
+    }
     const data = await request(`/cards/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ masteryStatus })
@@ -122,12 +243,37 @@ export async function updateCardStatus(id, masteryStatus, snapshot) {
 }
 
 export async function deleteCard(id) {
+  if (isSupabaseEnabled) {
+    const { error } = await supabase.from('cards').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    return
+  }
   await request(`/cards/${id}`, {
     method: 'DELETE'
   })
 }
 
 export async function createCategory(payload) {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id || authUserId
+    if (!userId) throw new Error('Non authentifié')
+    const { data, error } = await supabase.from('categories').insert({
+      user_id: userId,
+      name: payload.name,
+      parent_id: payload.parentId ?? null,
+      color: payload.color || 'blue'
+    }).select('*').single()
+    if (error) throw new Error(error.message)
+    return {
+      id: data.id,
+      name: data.name,
+      parentId: data.parent_id,
+      color: data.color || 'blue',
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
   const data = await request('/categories', {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -136,6 +282,23 @@ export async function createCategory(payload) {
 }
 
 export async function updateCategory(id, payload) {
+  if (isSupabaseEnabled) {
+    const updates = {
+      name: payload.name,
+      parent_id: payload.parentId ?? null,
+      color: payload.color
+    }
+    const { data, error } = await supabase.from('categories').update(updates).eq('id', id).select('*').single()
+    if (error) throw new Error(error.message)
+    return {
+      id: data.id,
+      name: data.name,
+      parentId: data.parent_id,
+      color: data.color || 'blue',
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
   const data = await request(`/categories/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload)
@@ -144,6 +307,16 @@ export async function updateCategory(id, payload) {
 }
 
 export async function deleteCategory(id) {
+  if (isSupabaseEnabled) {
+    // Supprimer d'abord les cartes associées (si foreign key on delete restrict)
+    const { error: cardErr } = await supabase.from('cards').delete().eq('category_id', id)
+    if (cardErr && cardErr.code !== 'PGRST204') {
+      throw new Error(cardErr.message)
+    }
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    return { ok: true }
+  }
   const data = await request(`/categories/${id}`, {
     method: 'DELETE'
   })
