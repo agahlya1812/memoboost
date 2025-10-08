@@ -257,6 +257,7 @@ export async function createCategory(payload) {
   if (isSupabaseEnabled) {
     const session = await supabase.auth.getSession()
     const userId = session?.data?.session?.user?.id
+    console.log('Debug Supabase session:', { session, userId })
     if (!userId) throw new Error('Non authentifié')
     const { data, error } = await supabase.from('categories').insert({
       user_id: userId,
