@@ -80,7 +80,9 @@ export async function registerUser(payload) {
 }
 
 export async function loginUser(payload) {
+  console.log('Debug login - isSupabaseEnabled:', isSupabaseEnabled)
   if (isSupabaseEnabled) {
+    console.log('Utilisation de Supabase pour l\'auth')
     const { data, error } = await supabase.auth.signInWithPassword({
       email: payload.email,
       password: payload.password
@@ -91,6 +93,7 @@ export async function loginUser(payload) {
     const user = data.user ? { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || '' } : null
     return user
   }
+  console.log('Utilisation de l\'API Render pour l\'auth')
   const data = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload)
