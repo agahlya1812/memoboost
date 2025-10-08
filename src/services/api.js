@@ -102,7 +102,7 @@ export async function fetchState() {
   if (isSupabaseEnabled) {
     // Charger catégories et cartes pour l'utilisateur courant
     const session = await supabase.auth.getSession()
-    const userId = session?.data?.session?.user?.id || authUserId
+    const userId = session?.data?.session?.user?.id
     if (!userId) {
       return { user: null, cards: [], categories: [] }
     }
@@ -145,7 +145,7 @@ export async function fetchState() {
 export async function createCard(payload) {
   if (isSupabaseEnabled) {
     const session = await supabase.auth.getSession()
-    const userId = session?.data?.session?.user?.id || authUserId
+    const userId = session?.data?.session?.user?.id
     if (!userId) throw new Error('Non authentifié')
     const { data, error } = await supabase.from('cards').insert({
       user_id: userId,
@@ -256,7 +256,7 @@ export async function deleteCard(id) {
 export async function createCategory(payload) {
   if (isSupabaseEnabled) {
     const session = await supabase.auth.getSession()
-    const userId = session?.data?.session?.user?.id || authUserId
+    const userId = session?.data?.session?.user?.id
     if (!userId) throw new Error('Non authentifié')
     const { data, error } = await supabase.from('categories').insert({
       user_id: userId,
