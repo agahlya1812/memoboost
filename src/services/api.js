@@ -254,6 +254,7 @@ export async function deleteCard(id) {
 }
 
 export async function createCategory(payload) {
+  console.log('Debug Supabase config:', { isSupabaseEnabled, supabaseUrl: import.meta.env.VITE_SUPABASE_URL, supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Présent' : 'Manquant' })
   if (isSupabaseEnabled) {
     const session = await supabase.auth.getSession()
     const userId = session?.data?.session?.user?.id
