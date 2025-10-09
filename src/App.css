@@ -456,6 +456,7 @@
   font-size: 1rem;
   line-height: 1.55;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .flashcard-grid.empty {
@@ -1000,7 +1001,7 @@
 .flashcard-envelope-grid {
   display: grid;
   gap: clamp(1.25rem, 3vw, 2rem);
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .flashcard-add-tile {
