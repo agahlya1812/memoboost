@@ -3,6 +3,8 @@ import Flashcard from './Flashcard'
 import { exportEnvelopeToPdf, importPdfToText } from '../utils/pdf'
 import { DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
 import { isSupabaseEnabled, supabase } from '../services/supabaseClient'
+import * as pdfjsLib from 'pdfjs-dist'
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
 function FlashcardEnvelope({
   folder,
@@ -82,6 +84,7 @@ function FlashcardEnvelope({
   const [pdfUrl, setPdfUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPdf, setShowPdf] = useState(false)
+  const pdfContainerRef = useRef(null)
   const openFilePicker = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click()
@@ -113,6 +116,39 @@ function FlashcardEnvelope({
     }
     check()
   }, [folder?.id])
+
+  // Rendu du PDF dans un canvas (supprime toute barre d'outils)
+  useEffect(() => {
+    const render = async () => {
+      if (!showPdf || !pdfUrl || !pdfContainerRef.current) return
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+        const loadingTask = pdfjsLib.getDocument(pdfUrl)
+        const pdf = await loadingTask.promise
+        // Nettoyer
+        pdfContainerRef.current.innerHTML = ''
+        const page = await pdf.getPage(1)
+        const viewport = page.getViewport({ scale: 1.2 })
+        const canvas = document.createElement('canvas')
+        const context = canvas.getContext('2d')
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        pdfContainerRef.current.appendChild(canvas)
+        await page.render({ canvasContext: context, viewport }).promise
+      } catch (e) {
+        // fallback: ouvrir dans iframe si rendu canvas échoue
+        const iframe = document.createElement('iframe')
+        iframe.title = 'Fiche de révision'
+        iframe.style.width = '100%'
+        iframe.style.height = '100%'
+        iframe.style.border = 'none'
+        iframe.src = (pdfUrl || '') + '#toolbar=0&navpanes=0&scrollbar=1'
+        pdfContainerRef.current.innerHTML = ''
+        pdfContainerRef.current.appendChild(iframe)
+      }
+    }
+    render()
+  }, [showPdf, pdfUrl])
 
   const handleFilterChange = (value) => {
     if (onChangeFilter) {
@@ -187,7 +223,7 @@ function FlashcardEnvelope({
           </button>
         </div>
         {showPdf && (
-          <div className="pdf-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
+          <div className="pdf-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.98)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
             <div className="pdf-panel" style={{ position: 'relative', width: 'min(1100px, 96vw)', height: 'min(92vh, 880px)', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(15,23,42,0.18)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid rgba(0,0,0,0.08)', background: '#ffffff' }}>
                 <strong style={{ fontSize: '0.95rem' }}>{folder.name} — Fiche de révision</strong>
@@ -214,10 +250,7 @@ function FlashcardEnvelope({
                     style={{ border: 'none', background: '#ffe5e5', color: '#8c2f39', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', fontSize: 18, fontWeight: 800 }}>×</button>
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <iframe title="Fiche de révision" src={(pdfUrl || '') + '#toolbar=0&navpanes=0&scrollbar=1'}
-                  style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }} />
-              </div>
+              <div ref={pdfContainerRef} style={{ flex: 1, overflow: 'auto', background: '#ffffff', padding: 16 }} />
             </div>
           </div>
         )}
