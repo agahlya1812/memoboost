@@ -128,12 +128,19 @@ function FlashcardEnvelope({
         // Nettoyer
         pdfContainerRef.current.innerHTML = ''
         const page = await pdf.getPage(1)
-        const viewport = page.getViewport({ scale: 1.2 })
+        const scale = 1.4
+        const viewport = page.getViewport({ scale })
         const canvas = document.createElement('canvas')
         const context = canvas.getContext('2d')
         canvas.width = viewport.width
         canvas.height = viewport.height
-        pdfContainerRef.current.appendChild(canvas)
+        const wrapper = document.createElement('div')
+        wrapper.style.display = 'inline-block'
+        wrapper.style.boxShadow = '0 6px 24px rgba(0,0,0,0.12)'
+        wrapper.style.borderRadius = '8px'
+        wrapper.style.overflow = 'hidden'
+        wrapper.appendChild(canvas)
+        pdfContainerRef.current.appendChild(wrapper)
         await page.render({ canvasContext: context, viewport }).promise
       } catch (e) {
         // fallback: ouvrir dans iframe si rendu canvas échoue
@@ -250,7 +257,7 @@ function FlashcardEnvelope({
                     style={{ border: 'none', background: '#ffe5e5', color: '#8c2f39', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', fontSize: 18, fontWeight: 800 }}>×</button>
                 </div>
               </div>
-              <div ref={pdfContainerRef} style={{ flex: 1, overflow: 'auto', background: '#ffffff', padding: 16 }} />
+              <div ref={pdfContainerRef} style={{ flex: 1, overflow: 'auto', background: '#ffffff', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
             </div>
           </div>
         )}
