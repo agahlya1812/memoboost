@@ -1,4 +1,6 @@
 import { jsPDF } from 'jspdf'
+import * as pdfjsLib from 'pdfjs-dist'
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
 export function exportEnvelopeToPdf(folder, cards) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -41,6 +43,22 @@ export function exportEnvelopeToPdf(folder, cards) {
 
   const filename = `fiche-${folder.name.replace(/[^a-z0-9-_]+/gi, '_')}.pdf`
   doc.save(filename)
+}
+
+// Parse un PDF importé et retourne un tableau de pages (texte brut)
+export async function importPdfToText(file) {
+  // Vite: importer l'URL du worker via ?url
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  const pages = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    const strings = content.items.map(item => item.str).join(' ')
+    pages.push(strings)
+  }
+  return pages
 }
 
 
