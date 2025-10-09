@@ -81,6 +81,7 @@ function FlashcardEnvelope({
   const [hasRevisionPdf, setHasRevisionPdf] = useState(false)
   const [pdfUrl, setPdfUrl] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPdf, setShowPdf] = useState(false)
   const openFilePicker = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click()
@@ -138,7 +139,9 @@ function FlashcardEnvelope({
               Exporter en PDF
             </button>
             {hasRevisionPdf ? (
-              <a className="flashcard-envelope-action secondary" href={pdfUrl || '#'} target="_blank" rel="noreferrer">Fiche de révision</a>
+              <button type="button" className="flashcard-envelope-action secondary" onClick={() => setShowPdf(true)}>
+                Fiche de révision
+              </button>
             ) : (
               <button type="button" className="flashcard-envelope-action secondary" onClick={openFilePicker} disabled={busy}>Importer PDF</button>
             )}
@@ -183,6 +186,16 @@ function FlashcardEnvelope({
             <p>Ajouter une carte</p>
           </button>
         </div>
+        {showPdf && (
+          <div className="pdf-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
+            <div className="pdf-panel" style={{ position: 'relative', width: 'min(1000px, 95vw)', height: 'min(90vh, 800px)', background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(15,23,42,0.25)' }}>
+              <button type="button" aria-label="Fermer" onClick={() => setShowPdf(false)}
+                style={{ position: 'absolute', top: 10, right: 10, border: 'none', background: 'rgba(0,0,0,0.08)', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer' }}>×</button>
+              <iframe title="Fiche de révision" src={pdfUrl}
+                style={{ width: '100%', height: '100%', border: 'none' }} />
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
