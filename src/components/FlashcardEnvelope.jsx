@@ -128,7 +128,7 @@ function FlashcardEnvelope({
         // Nettoyer
         pdfContainerRef.current.innerHTML = ''
         const page = await pdf.getPage(1)
-        const scale = 1.4
+        const scale = 1.3
         const viewport = page.getViewport({ scale })
         const canvas = document.createElement('canvas')
         const context = canvas.getContext('2d')
@@ -257,7 +257,7 @@ function FlashcardEnvelope({
                     style={{ border: 'none', background: '#ffe5e5', color: '#8c2f39', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', fontSize: 18, fontWeight: 800 }}>×</button>
                 </div>
               </div>
-              <div ref={pdfContainerRef} style={{ flex: 1, overflow: 'auto', background: '#ffffff', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+              <div ref={pdfContainerRef} style={{ flex: 1, overflow: 'auto', background: '#ffffff', padding: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }} />
             </div>
           </div>
         )}
