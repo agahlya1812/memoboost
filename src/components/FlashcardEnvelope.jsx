@@ -1,5 +1,6 @@
+import { useRef } from 'react'
 import Flashcard from './Flashcard'
-import { exportEnvelopeToPdf } from '../utils/pdf'
+import { exportEnvelopeToPdf, importPdfToText } from '../utils/pdf'
 import { DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
 
 function FlashcardEnvelope({
@@ -50,6 +51,28 @@ function FlashcardEnvelope({
     }
   }
 
+  const handleImportPdf = async (event) => {
+    const file = event.target.files && event.target.files[0]
+    if (!file) return
+    try {
+      const pages = await importPdfToText(file)
+      const text = pages.join('\n\n')
+      alert(`PDF importé. Longueur texte: ${text.length} caractères.\n\nCopiez/collez dans vos cartes.`)
+    } catch (error) {
+      console.error('Import PDF impossible', error)
+      alert("Import PDF impossible pour le moment.")
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const fileInputRef = useRef(null)
+  const openFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
   const handleFilterChange = (value) => {
     if (onChangeFilter) {
       onChangeFilter(value)
@@ -74,6 +97,10 @@ function FlashcardEnvelope({
             <button type="button" className="flashcard-envelope-action secondary" onClick={handleExportPdf}>
               Exporter en PDF
             </button>
+            <button type="button" className="flashcard-envelope-action secondary" onClick={openFilePicker}>
+              Importer PDF
+            </button>
+            <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handleImportPdf} style={{ display: 'none' }} />
           </div>
           <span className="flashcard-envelope-count">{cardCountLabel}</span>
           <button type="button" className="flashcard-envelope-close" onClick={onClose} aria-label="Fermer l'enveloppe">
