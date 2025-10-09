@@ -1,7 +1,8 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Flashcard from './Flashcard'
 import { exportEnvelopeToPdf, importPdfToText } from '../utils/pdf'
 import { DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
+import { isSupabaseEnabled, supabase } from '../services/supabaseClient'
 
 function FlashcardEnvelope({
   folder,
@@ -55,23 +56,62 @@ function FlashcardEnvelope({
     const file = event.target.files && event.target.files[0]
     if (!file) return
     try {
-      const pages = await importPdfToText(file)
-      const text = pages.join('\n\n')
-      alert(`PDF importé. Longueur texte: ${text.length} caractères.\n\nCopiez/collez dans vos cartes.`)
+      if (!isSupabaseEnabled) {
+        const pages = await importPdfToText(file)
+        const text = pages.join('\n\n')
+        alert(`PDF importé (local). Longueur texte: ${text.length} caractères.`)
+        return
+      }
+      setBusy(true)
+      const path = `${folder.id}.pdf`
+      await supabase.storage.from('revisions').upload(path, file, { upsert: true, contentType: file.type || 'application/pdf' })
+      const { data } = supabase.storage.from('revisions').getPublicUrl(path)
+      setHasRevisionPdf(true)
+      setPdfUrl(data?.publicUrl || '')
     } catch (error) {
       console.error('Import PDF impossible', error)
       alert("Import PDF impossible pour le moment.")
     } finally {
       event.target.value = ''
+      setBusy(false)
     }
   }
 
   const fileInputRef = useRef(null)
+  const [hasRevisionPdf, setHasRevisionPdf] = useState(false)
+  const [pdfUrl, setPdfUrl] = useState('')
+  const [busy, setBusy] = useState(false)
   const openFilePicker = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click()
     }
   }
+
+  useEffect(() => {
+    if (!isSupabaseEnabled || !folder?.id) {
+      setHasRevisionPdf(false)
+      setPdfUrl('')
+      return
+    }
+    const check = async () => {
+      try {
+        const path = `${folder.id}.pdf`
+        const { data } = await supabase.storage.from('revisions').list('', { search: path })
+        const exists = Array.isArray(data) && data.some((o) => o.name === `${folder.id}.pdf`)
+        setHasRevisionPdf(Boolean(exists))
+        if (exists) {
+          const { data: pub } = supabase.storage.from('revisions').getPublicUrl(path)
+          setPdfUrl(pub?.publicUrl || '')
+        } else {
+          setPdfUrl('')
+        }
+      } catch {
+        setHasRevisionPdf(false)
+        setPdfUrl('')
+      }
+    }
+    check()
+  }, [folder?.id])
 
   const handleFilterChange = (value) => {
     if (onChangeFilter) {
@@ -97,9 +137,11 @@ function FlashcardEnvelope({
             <button type="button" className="flashcard-envelope-action secondary" onClick={handleExportPdf}>
               Exporter en PDF
             </button>
-            <button type="button" className="flashcard-envelope-action secondary" onClick={openFilePicker}>
-              Importer PDF
-            </button>
+            {hasRevisionPdf ? (
+              <a className="flashcard-envelope-action secondary" href={pdfUrl || '#'} target="_blank" rel="noreferrer">Fiche de révision</a>
+            ) : (
+              <button type="button" className="flashcard-envelope-action secondary" onClick={openFilePicker} disabled={busy}>Importer PDF</button>
+            )}
             <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handleImportPdf} style={{ display: 'none' }} />
           </div>
           <span className="flashcard-envelope-count">{cardCountLabel}</span>
