@@ -187,12 +187,37 @@ function FlashcardEnvelope({
           </button>
         </div>
         {showPdf && (
-          <div className="pdf-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
-            <div className="pdf-panel" style={{ position: 'relative', width: 'min(1000px, 95vw)', height: 'min(90vh, 800px)', background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(15,23,42,0.25)' }}>
-              <button type="button" aria-label="Fermer" onClick={() => setShowPdf(false)}
-                style={{ position: 'absolute', top: 10, right: 10, border: 'none', background: 'rgba(0,0,0,0.08)', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer' }}>×</button>
-              <iframe title="Fiche de révision" src={pdfUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }} />
+          <div className="pdf-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
+            <div className="pdf-panel" style={{ position: 'relative', width: 'min(1100px, 96vw)', height: 'min(92vh, 880px)', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(15,23,42,0.18)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid rgba(0,0,0,0.08)', background: '#ffffff' }}>
+                <strong style={{ fontSize: '0.95rem' }}>{folder.name} — Fiche de révision</strong>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={async () => {
+                    if (!isSupabaseEnabled || !pdfUrl) { setShowPdf(false); return }
+                    const ok = window.confirm('Supprimer le PDF de cette enveloppe ?')
+                    if (!ok) return
+                    try {
+                      setBusy(true)
+                      const path = `${folder.id}.pdf`
+                      await supabase.storage.from('revisions').remove([path])
+                      setHasRevisionPdf(false)
+                      setPdfUrl('')
+                      setShowPdf(false)
+                    } catch (e) {
+                      alert("Suppression impossible pour le moment.")
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                  style={{ border: 'none', background: '#ffe5e5', color: '#8c2f39', fontWeight: 700, padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Supprimer</button>
+                  <button type="button" aria-label="Fermer" onClick={() => setShowPdf(false)}
+                    style={{ border: 'none', background: '#ffe5e5', color: '#8c2f39', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', fontSize: 18, fontWeight: 800 }}>×</button>
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <iframe title="Fiche de révision" src={(pdfUrl || '') + '#toolbar=0&navpanes=0&scrollbar=1'}
+                  style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }} />
+              </div>
             </div>
           </div>
         )}
