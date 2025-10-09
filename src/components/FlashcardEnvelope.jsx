@@ -1,4 +1,5 @@
 import Flashcard from './Flashcard'
+import { exportEnvelopeToPdf } from '../utils/pdf'
 import { DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
 
 function FlashcardEnvelope({
@@ -40,6 +41,15 @@ function FlashcardEnvelope({
     }
   }
 
+  const handleExportPdf = () => {
+    try {
+      exportEnvelopeToPdf(folder, cards)
+    } catch (error) {
+      console.error('Export PDF impossible', error)
+      alert("Export PDF impossible pour le moment.")
+    }
+  }
+
   const handleFilterChange = (value) => {
     if (onChangeFilter) {
       onChangeFilter(value)
@@ -60,6 +70,9 @@ function FlashcardEnvelope({
           <div className="flashcard-envelope-actions">
             <button type="button" className="flashcard-envelope-action" onClick={handleStartRevision}>
               Révision
+            </button>
+            <button type="button" className="flashcard-envelope-action secondary" onClick={handleExportPdf}>
+              Exporter en PDF
             </button>
           </div>
           <span className="flashcard-envelope-count">{cardCountLabel}</span>
