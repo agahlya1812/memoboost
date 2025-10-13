@@ -357,44 +357,66 @@ export async function uploadCardImage(cardId, file) {
   const fileExt = file.name.split('.').pop()
   const fileName = `${userId}/${cardId}-${Date.now()}.${fileExt}`
   
-  // Upload vers Supabase Storage
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('card-images')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false
-    })
+  try {
+    // Upload vers Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('card-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
 
-  if (uploadError) {
-    throw new Error(`Erreur d'upload: ${uploadError.message}`)
+    if (uploadError) {
+      throw new Error(`Erreur d'upload: ${uploadError.message}`)
+    }
+
+    // Obtenir l'URL publique
+    const { data: urlData } = supabase.storage
+      .from('card-images')
+      .getPublicUrl(fileName)
+
+    return urlData.publicUrl
+  } catch (error) {
+    // Si le bucket n'existe pas, créer un message d'erreur plus clair
+    if (error.message.includes('bucket') || error.message.includes('not found')) {
+      throw new Error('Le stockage d\'images n\'est pas encore configuré. Veuillez contacter l\'administrateur.')
+    }
+    throw error
   }
-
-  // Obtenir l'URL publique
-  const { data: urlData } = supabase.storage
-    .from('card-images')
-    .getPublicUrl(fileName)
-
-  return urlData.publicUrl
 }
 
 export async function updateCardImage(cardId, imageUrl) {
   if (isSupabaseEnabled) {
-    const { data, error } = await supabase.from('cards')
-      .update({ image_url: imageUrl })
-      .eq('id', cardId)
-      .select('*')
-      .single()
-    
-    if (error) throw new Error(error.message)
-    return {
-      id: data.id,
-      question: data.question,
-      answer: data.answer,
-      categoryId: data.category_id,
-      masteryStatus: data.mastery_status || 'unknown',
-      imageUrl: data.image_url,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+    try {
+      const { data, error } = await supabase.from('cards')
+        .update({ image_url: imageUrl })
+        .eq('id', cardId)
+        .select('*')
+        .single()
+      
+      if (error) {
+        // Si la colonne n'existe pas, retourner une erreur claire
+        if (error.message.includes('image_url') || error.message.includes('column')) {
+          throw new Error('La colonne image_url n\'existe pas dans la base de données. Veuillez exécuter le script de migration.')
+        }
+        throw new Error(error.message)
+      }
+      
+      return {
+        id: data.id,
+        question: data.question,
+        answer: data.answer,
+        categoryId: data.category_id,
+        masteryStatus: data.mastery_status || 'unknown',
+        imageUrl: data.image_url,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
+    } catch (error) {
+      if (error.message.includes('image_url') || error.message.includes('column')) {
+        throw new Error('La colonne image_url n\'existe pas dans la base de données. Veuillez exécuter le script de migration.')
+      }
+      throw error
     }
   }
   
