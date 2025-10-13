@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { COLOR_OPTIONS, DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
 
 const typeLabels = {
@@ -24,7 +24,9 @@ const defaultState = {
   selectedCategoryId: '',
   newCategoryName: '',
   folderName: '',
-  folderColor: DEFAULT_COLOR
+  folderColor: DEFAULT_COLOR,
+  imageFile: null,
+  imagePreview: null
 }
 
 function ItemPanel({
@@ -49,6 +51,7 @@ function ItemPanel({
   const [formState, setFormState] = useState(defaultState)
   const [error, setError] = useState('')
   const [isBusy, setIsBusy] = useState(false)
+  const fileInputRef = useRef(null)
 
   const shouldForceContextCategory =
     type === 'flashcard' && mode === 'add' && Boolean(contextCategoryId)
@@ -114,6 +117,49 @@ function ItemPanel({
       ...current,
       ...changes
     }))
+  }
+
+  const handleImageSelect = (event) => {
+    const file = event.target.files && event.target.files[0]
+    if (!file) return
+
+    // Vérifier le type de fichier
+    if (!file.type.startsWith('image/')) {
+      setError('Veuillez sélectionner un fichier image.')
+      return
+    }
+
+    // Vérifier la taille (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('L\'image ne doit pas dépasser 5MB.')
+      return
+    }
+
+    // Créer un aperçu de l'image
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      updateForm({
+        imageFile: file,
+        imagePreview: e.target.result
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleImageRemove = () => {
+    updateForm({
+      imageFile: null,
+      imagePreview: null
+    })
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const openFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
   }
 
   const handleClose = () => {
@@ -218,7 +264,8 @@ function ItemPanel({
       mode,
       type,
       id: item?.id,
-      ...payload
+      ...payload,
+      imageFile: formState.imageFile
     }
 
     try {
@@ -338,6 +385,57 @@ function ItemPanel({
                   disabled={isBusy}
                 />
               </label>
+
+              <fieldset className="field">
+                <legend>Image (optionnel)</legend>
+                <div className="image-upload-section">
+                  {formState.imagePreview ? (
+                    <div className="image-preview-container">
+                      <div className="image-preview">
+                        <img src={formState.imagePreview} alt="Aperçu de l'image" />
+                      </div>
+                      <div className="image-actions">
+                        <button
+                          type="button"
+                          className="image-action-button secondary"
+                          onClick={openFilePicker}
+                          disabled={isBusy}
+                        >
+                          Changer
+                        </button>
+                        <button
+                          type="button"
+                          className="image-action-button danger"
+                          onClick={handleImageRemove}
+                          disabled={isBusy}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="image-upload-placeholder">
+                      <button
+                        type="button"
+                        className="image-upload-button"
+                        onClick={openFilePicker}
+                        disabled={isBusy}
+                      >
+                        <span className="image-upload-icon">📷</span>
+                        <span>Ajouter une image</span>
+                      </button>
+                      <p className="image-upload-hint">JPG, PNG, GIF (max 5MB)</p>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+              </fieldset>
 
               {allowCategorySelection ? (
                 <fieldset className="field">

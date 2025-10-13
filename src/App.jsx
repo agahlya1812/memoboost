@@ -483,11 +483,23 @@ function App() {
         }
 
         if (payload.mode === 'add') {
-          await createCard({
+          const newCard = await createCard({
             question: payload.question,
             answer: payload.answer,
             categoryId
           })
+          
+          // Upload l'image si elle existe
+          if (payload.imageFile) {
+            try {
+              const imageUrl = await uploadCardImage(newCard.id, payload.imageFile)
+              await updateCardImage(newCard.id, imageUrl)
+            } catch (error) {
+              console.warn('Erreur lors de l\'upload de l\'image:', error)
+              // Continue même si l'upload d'image échoue
+            }
+          }
+          
           message = message || 'Carte ajoutee.'
         } else {
           await updateCard(payload.id, {
@@ -495,6 +507,18 @@ function App() {
             answer: payload.answer,
             categoryId
           })
+          
+          // Upload l'image si elle existe
+          if (payload.imageFile) {
+            try {
+              const imageUrl = await uploadCardImage(payload.id, payload.imageFile)
+              await updateCardImage(payload.id, imageUrl)
+            } catch (error) {
+              console.warn('Erreur lors de l\'upload de l\'image:', error)
+              // Continue même si l'upload d'image échoue
+            }
+          }
+          
           message = message || 'Carte mise a jour.'
         }
 
