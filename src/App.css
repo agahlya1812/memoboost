@@ -526,14 +526,43 @@
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(85, 85, 85, 0.1);
+  background: #f8f9fa;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .flashcard-image img {
   width: 100%;
   height: auto;
   max-height: 200px;
+  min-height: 120px;
   object-fit: cover;
   display: block;
+  transition: opacity 0.3s ease;
+}
+
+.flashcard-image img:not([src]) {
+  opacity: 0;
+}
+
+.flashcard-image img[src] {
+  opacity: 1;
+}
+
+.flashcard-image-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #666;
+  z-index: 1;
 }
 
 .flashcard-grid.empty {

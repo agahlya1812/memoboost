@@ -847,18 +847,37 @@ function App() {
     setNotice('')
 
     try {
+      // Créer un URL temporaire pour affichage immédiat
+      const tempImageUrl = URL.createObjectURL(file)
+      
+      // Mettre à jour immédiatement l'état local avec l'image temporaire
+      setCards(prev => prev.map(c => 
+        c.id === card.id 
+          ? { ...c, imageUrl: tempImageUrl }
+          : c
+      ))
+      
       // Upload l'image vers Supabase Storage
       const imageUrl = await uploadCardImage(card.id, file)
       
       // Mettre à jour la carte dans la base de données
       const updatedCard = await updateCardImage(card.id, imageUrl)
       
-      // Mettre à jour l'état local
+      // Remplacer l'URL temporaire par l'URL Supabase
       setCards(prev => prev.map(c => c.id === card.id ? updatedCard : c))
+      
+      // Nettoyer l'URL temporaire
+      URL.revokeObjectURL(tempImageUrl)
       
       setNoticeTone('success')
       setNotice('Image ajoutée à la carte.')
     } catch (error) {
+      // En cas d'erreur, retirer l'image temporaire
+      setCards(prev => prev.map(c => 
+        c.id === card.id 
+          ? { ...c, imageUrl: null }
+          : c
+      ))
       setNoticeTone('error')
       setNotice(error.message || 'Erreur lors de l\'ajout de l\'image.')
     } finally {

@@ -195,7 +195,17 @@ function Flashcard({ card, onEdit, onDelete, onEvaluate, onImageUpload, variant 
         <p>{flipped ? card.answer : card.question}</p>
         {card.imageUrl && (
           <div className="flashcard-image">
-            <img src={card.imageUrl} alt="Image de la carte" />
+            <img 
+              src={card.imageUrl} 
+              alt="Image de la carte" 
+              onLoad={() => console.log('Image chargée avec succès')}
+              onError={() => console.log('Erreur de chargement de l\'image')}
+            />
+            {card.imageUrl.startsWith('blob:') && (
+              <div className="flashcard-image-loading">
+                <span>Chargement...</span>
+              </div>
+            )}
           </div>
         )}
       </div>
