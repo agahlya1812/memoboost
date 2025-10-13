@@ -22,6 +22,7 @@ create table if not exists public.cards (
   question text not null,
   answer text not null,
   mastery_status text default 'unknown',
+  image_url text null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

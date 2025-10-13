@@ -16,6 +16,7 @@ function FlashcardEnvelope({
   onEvaluateCard,
   onAddCard,
   onStartRevision,
+  onImageUpload,
   onClose
 }) {
   if (!folder) {
@@ -221,6 +222,7 @@ function FlashcardEnvelope({
               onEdit={onEditCard}
               onDelete={onDeleteCard}
               onEvaluate={handleEvaluate}
+              onImageUpload={onImageUpload}
               variant="envelope"
             />
           ))}

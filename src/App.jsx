@@ -17,7 +17,9 @@ import {
   setAuthUserId,
   updateCard,
   updateCardStatus,
-  updateCategory
+  updateCategory,
+  uploadCardImage,
+  updateCardImage
 } from './services/api'
 import { DEFAULT_COLOR, PASTEL_COLORS } from './constants/palette'
 import { ensureSlug } from './utils/slug'
@@ -838,6 +840,32 @@ function App() {
     }
   }
 
+  const handleImageUpload = async (card, file) => {
+    if (!file) return
+
+    setIsSyncing(true)
+    setNotice('')
+
+    try {
+      // Upload l'image vers Supabase Storage
+      const imageUrl = await uploadCardImage(card.id, file)
+      
+      // Mettre à jour la carte dans la base de données
+      const updatedCard = await updateCardImage(card.id, imageUrl)
+      
+      // Mettre à jour l'état local
+      setCards(prev => prev.map(c => c.id === card.id ? updatedCard : c))
+      
+      setNoticeTone('success')
+      setNotice('Image ajoutée à la carte.')
+    } catch (error) {
+      setNoticeTone('error')
+      setNotice(error.message || 'Erreur lors de l\'ajout de l\'image.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const openImportExportModal = useCallback(() => {
     setImportExportModal({ isOpen: true })
   }, [])
@@ -1057,6 +1085,7 @@ function App() {
                     onDeleteCard={handleDeleteCard}
                     onAddCard={openAddCard}
                     onEvaluateCard={handleEvaluateCard}
+                    onImageUpload={handleImageUpload}
                     onStartRevision={startRevisionSession}
                     onClose={handleCloseEnvelope}
                   />

@@ -7,30 +7,37 @@ const STATUS_LABELS = {
   known: 'Maîtrisée'
 }
 
-function Flashcard({ card, onEdit, onDelete, onEvaluate, variant = 'default' }) {
+function Flashcard({ card, onEdit, onDelete, onEvaluate, onImageUpload, variant = 'default' }) {
   const palette = PASTEL_COLORS[card.categoryColor] || PASTEL_COLORS[DEFAULT_COLOR]
   const status = card.masteryStatus || 'unknown'
   const [flipped, setFlipped] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [imageMenuOpen, setImageMenuOpen] = useState(false)
   const menuRef = useRef(null)
+  const imageMenuRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
-    if (!menuOpen) {
+    if (!menuOpen && !imageMenuOpen) {
       return
     }
 
     const closeOnOutside = (event) => {
-      if (!menuRef.current) {
+      if (!menuRef.current && !imageMenuRef.current) {
         return
       }
-      if (!menuRef.current.contains(event.target)) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false)
+      }
+      if (imageMenuRef.current && !imageMenuRef.current.contains(event.target)) {
+        setImageMenuOpen(false)
       }
     }
 
     const closeOnEscape = (event) => {
       if (event.key === 'Escape') {
         setMenuOpen(false)
+        setImageMenuOpen(false)
       }
     }
 
@@ -41,7 +48,7 @@ function Flashcard({ card, onEdit, onDelete, onEvaluate, variant = 'default' }) 
       document.removeEventListener('mousedown', closeOnOutside)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [menuOpen])
+  }, [menuOpen, imageMenuOpen])
 
   const handleEdit = (event) => {
     event.stopPropagation()
@@ -76,6 +83,28 @@ function Flashcard({ card, onEdit, onDelete, onEvaluate, variant = 'default' }) 
   const handleToggleMenu = (event) => {
     event.stopPropagation()
     setMenuOpen((value) => !value)
+  }
+
+  const handleToggleImageMenu = (event) => {
+    event.stopPropagation()
+    setImageMenuOpen((value) => !value)
+  }
+
+  const handleImageUpload = (event) => {
+    event.stopPropagation()
+    setImageMenuOpen(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleFileChange = (event) => {
+    const file = event.target.files && event.target.files[0]
+    if (file && onImageUpload) {
+      onImageUpload(card, file)
+    }
+    // Reset the input
+    event.target.value = ''
   }
 
   const handleEvaluate = (event, nextStatus) => {
@@ -116,26 +145,47 @@ function Flashcard({ card, onEdit, onDelete, onEvaluate, variant = 'default' }) 
         </div>
         <div className="flashcard-header-tools">
           <span className="flashcard-flip-indicator">{flipped ? 'Réponse' : 'Question'}</span>
-          <div className="flashcard-menu" ref={menuRef}>
-            <button
-              type="button"
-              className="flashcard-menu-trigger"
-              aria-haspopup="true"
-              aria-expanded={menuOpen}
-              onClick={handleToggleMenu}
-            >
-              ⋮
-            </button>
-            {menuOpen && (
-              <div className="flashcard-menu-popover">
-                <button type="button" className="flashcard-menu-item" onClick={handleEdit}>
-                  Modifier
-                </button>
-                <button type="button" className="flashcard-menu-item danger" onClick={handleDelete}>
-                  Supprimer
-                </button>
-              </div>
-            )}
+          <div className="flashcard-actions">
+            <div className="flashcard-image-menu" ref={imageMenuRef}>
+              <button
+                type="button"
+                className="flashcard-image-trigger"
+                aria-haspopup="true"
+                aria-expanded={imageMenuOpen}
+                onClick={handleToggleImageMenu}
+                title="Ajouter une image"
+              >
+                📷
+              </button>
+              {imageMenuOpen && (
+                <div className="flashcard-image-popover">
+                  <button type="button" className="flashcard-image-item" onClick={handleImageUpload}>
+                    Ajouter une image
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flashcard-menu" ref={menuRef}>
+              <button
+                type="button"
+                className="flashcard-menu-trigger"
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
+                onClick={handleToggleMenu}
+              >
+                ⋮
+              </button>
+              {menuOpen && (
+                <div className="flashcard-menu-popover">
+                  <button type="button" className="flashcard-menu-item" onClick={handleEdit}>
+                    Modifier
+                  </button>
+                  <button type="button" className="flashcard-menu-item danger" onClick={handleDelete}>
+                    Supprimer
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -143,6 +193,11 @@ function Flashcard({ card, onEdit, onDelete, onEvaluate, variant = 'default' }) 
       <div className="flashcard-body">
         <span className="flashcard-side-title">{flipped ? 'Réponse' : 'Question'}</span>
         <p>{flipped ? card.answer : card.question}</p>
+        {card.imageUrl && (
+          <div className="flashcard-image">
+            <img src={card.imageUrl} alt="Image de la carte" />
+          </div>
+        )}
       </div>
 
       <div className="flashcard-eval">
@@ -161,6 +216,14 @@ function Flashcard({ card, onEdit, onDelete, onEvaluate, variant = 'default' }) 
           À revoir
         </button>
       </div>
+      
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
     </article>
   )
 }

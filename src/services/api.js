@@ -131,6 +131,7 @@ export async function fetchState() {
       answer: r.answer,
       categoryId: r.category_id,
       masteryStatus: r.mastery_status || 'unknown',
+      imageUrl: r.image_url,
       createdAt: r.created_at,
       updatedAt: r.updated_at
     }))
@@ -155,7 +156,8 @@ export async function createCard(payload) {
       question: payload.question,
       answer: payload.answer,
       category_id: payload.categoryId,
-      mastery_status: payload.masteryStatus || 'unknown'
+      mastery_status: payload.masteryStatus || 'unknown',
+      image_url: payload.imageUrl || null
     }).select('*').single()
     if (error) throw new Error(error.message)
     return {
@@ -164,6 +166,7 @@ export async function createCard(payload) {
       answer: data.answer,
       categoryId: data.category_id,
       masteryStatus: data.mastery_status || 'unknown',
+      imageUrl: data.image_url,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     }
@@ -181,7 +184,8 @@ export async function updateCard(id, payload) {
       question: payload.question,
       answer: payload.answer,
       category_id: payload.categoryId,
-      mastery_status: payload.masteryStatus
+      mastery_status: payload.masteryStatus,
+      image_url: payload.imageUrl
     }
     const { data, error } = await supabase.from('cards').update(updates).eq('id', id).select('*').single()
     if (error) throw new Error(error.message)
@@ -191,6 +195,7 @@ export async function updateCard(id, payload) {
       answer: data.answer,
       categoryId: data.category_id,
       masteryStatus: data.mastery_status || 'unknown',
+      imageUrl: data.image_url,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     }
@@ -213,6 +218,7 @@ export async function updateCardStatus(id, masteryStatus, snapshot) {
         answer: data.answer,
         categoryId: data.category_id,
         masteryStatus: data.mastery_status || 'unknown',
+        imageUrl: data.image_url,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       }
@@ -326,4 +332,76 @@ export async function deleteCategory(id) {
     method: 'DELETE'
   })
   return data
+}
+
+export async function uploadCardImage(cardId, file) {
+  if (!isSupabaseEnabled) {
+    throw new Error('Upload d\'image non disponible en mode local')
+  }
+
+  const session = await supabase.auth.getSession()
+  const userId = session?.data?.session?.user?.id
+  if (!userId) throw new Error('Non authentifié')
+
+  // Vérifier le type de fichier
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Le fichier doit être une image')
+  }
+
+  // Vérifier la taille (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('L\'image ne doit pas dépasser 5MB')
+  }
+
+  // Générer un nom de fichier unique
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${userId}/${cardId}-${Date.now()}.${fileExt}`
+  
+  // Upload vers Supabase Storage
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('card-images')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    })
+
+  if (uploadError) {
+    throw new Error(`Erreur d'upload: ${uploadError.message}`)
+  }
+
+  // Obtenir l'URL publique
+  const { data: urlData } = supabase.storage
+    .from('card-images')
+    .getPublicUrl(fileName)
+
+  return urlData.publicUrl
+}
+
+export async function updateCardImage(cardId, imageUrl) {
+  if (isSupabaseEnabled) {
+    const { data, error } = await supabase.from('cards')
+      .update({ image_url: imageUrl })
+      .eq('id', cardId)
+      .select('*')
+      .single()
+    
+    if (error) throw new Error(error.message)
+    return {
+      id: data.id,
+      question: data.question,
+      answer: data.answer,
+      categoryId: data.category_id,
+      masteryStatus: data.mastery_status || 'unknown',
+      imageUrl: data.image_url,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
+  
+  // Fallback pour l'API locale
+  const data = await request(`/cards/${cardId}/image`, {
+    method: 'PATCH',
+    body: JSON.stringify({ imageUrl })
+  })
+  return data.card
 }
