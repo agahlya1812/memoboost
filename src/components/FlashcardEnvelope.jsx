@@ -3,6 +3,7 @@ import Flashcard from './Flashcard'
 import { exportEnvelopeToPdf, importPdfToText } from '../utils/pdf'
 import { DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
 import { isSupabaseEnabled, supabase } from '../services/supabaseClient'
+import { processPDFAndGenerateCards } from '../services/aiService'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
@@ -17,6 +18,7 @@ function FlashcardEnvelope({
   onAddCard,
   onStartRevision,
   onImageUpload,
+  onAIGenerate,
   onClose
 }) {
   if (!folder) {
@@ -85,6 +87,10 @@ function FlashcardEnvelope({
   const [pdfUrl, setPdfUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPdf, setShowPdf] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiPdfFile, setAiPdfFile] = useState(null)
+  const [aiDragOver, setAiDragOver] = useState(false)
   const pdfContainerRef = useRef(null)
   const openFilePicker = () => {
     if (fileInputRef.current) {
@@ -170,6 +176,71 @@ function FlashcardEnvelope({
     }
   }
 
+  const handleAIGenerate = () => {
+    setShowAIModal(true)
+  }
+
+  const handleAIClose = () => {
+    setShowAIModal(false)
+    setAiGenerating(false)
+    setAiPdfFile(null)
+    setAiDragOver(false)
+  }
+
+  const handleAIFileSelect = (file) => {
+    if (file && file.type === 'application/pdf') {
+      setAiPdfFile(file)
+    } else {
+      alert('Veuillez sélectionner un fichier PDF valide')
+    }
+  }
+
+  const handleAIDragOver = (e) => {
+    e.preventDefault()
+    setAiDragOver(true)
+  }
+
+  const handleAIDragLeave = (e) => {
+    e.preventDefault()
+    setAiDragOver(false)
+  }
+
+  const handleAIDrop = (e) => {
+    e.preventDefault()
+    setAiDragOver(false)
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      handleAIFileSelect(files[0])
+    }
+  }
+
+  const handleAISubmit = async () => {
+    if (!aiPdfFile) return
+    
+    setAiGenerating(true)
+    try {
+      // Traiter le PDF avec l'IA
+      const result = await processPDFAndGenerateCards(aiPdfFile, folder.id, {
+        numberOfCards: 10,
+        difficulty: 'intermediate'
+      })
+      
+      console.log('Cartes générées:', result)
+      
+      // Notifier le composant parent
+      if (onAIGenerate) {
+        onAIGenerate(result)
+      }
+      
+      setShowAIModal(false)
+    } catch (error) {
+      console.error('Erreur lors de la génération IA:', error)
+      alert(`Erreur lors de la génération des cartes: ${error.message}`)
+    } finally {
+      setAiGenerating(false)
+    }
+  }
+
   return (
     <section className="flashcard-envelope">
       <header className="flashcard-envelope-header" style={{ backgroundColor: palette.accent }}>
@@ -181,6 +252,9 @@ function FlashcardEnvelope({
             </button>
             <button type="button" className="flashcard-envelope-action secondary" onClick={handleExportPdf}>
               Exporter en PDF
+            </button>
+            <button type="button" className="flashcard-envelope-action ai" onClick={handleAIGenerate}>
+              🤖 IA - Générer des cartes
             </button>
             {hasRevisionPdf ? (
               <button type="button" className="flashcard-envelope-action secondary" onClick={() => setShowPdf(true)}>
@@ -260,6 +334,146 @@ function FlashcardEnvelope({
                 </div>
               </div>
               <div ref={pdfContainerRef} style={{ flex: 1, overflow: 'auto', background: '#ffffff', padding: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }} />
+            </div>
+          </div>
+        )}
+        
+        {/* Modal IA */}
+        {showAIModal && (
+          <div className="ai-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
+            <div className="ai-modal" style={{ background: '#ffffff', borderRadius: '16px', padding: '2rem', maxWidth: '500px', width: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>🤖 Génération IA de cartes</h3>
+                <button 
+                  type="button" 
+                  onClick={handleAIClose}
+                  style={{ border: 'none', background: 'transparent', fontSize: '1.5rem', cursor: 'pointer' }}
+                  disabled={aiGenerating}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <p style={{ margin: '0 0 1rem 0', color: '#666' }}>
+                  Importez votre cours en PDF et l'IA générera automatiquement des cartes de révision avec questions et réponses.
+                </p>
+                
+                <div 
+                  style={{ 
+                    border: `2px dashed ${aiDragOver ? '#6CBDBA' : '#ddd'}`, 
+                    borderRadius: '8px', 
+                    padding: '2rem', 
+                    textAlign: 'center', 
+                    background: aiDragOver ? '#f0f9ff' : '#f9f9f9',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onDragOver={handleAIDragOver}
+                  onDragLeave={handleAIDragLeave}
+                  onDrop={handleAIDrop}
+                >
+                  {aiPdfFile ? (
+                    <div>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</div>
+                      <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600' }}>{aiPdfFile.name}</p>
+                      <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#666' }}>
+                        {(aiPdfFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <button 
+                        type="button"
+                        onClick={() => setAiPdfFile(null)}
+                        style={{ 
+                          background: 'transparent', 
+                          color: '#666', 
+                          border: '1px solid #ddd', 
+                          padding: '0.5rem 1rem', 
+                          borderRadius: '6px', 
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                        disabled={aiGenerating}
+                      >
+                        Changer de fichier
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</div>
+                      <p style={{ margin: '0 0 1rem 0', fontWeight: '600' }}>Glissez-déposez votre PDF ici</p>
+                      <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#666' }}>
+                        Formats supportés: PDF (max 10MB)
+                      </p>
+                      <button 
+                        type="button"
+                        onClick={() => document.getElementById('ai-file-input')?.click()}
+                        style={{ 
+                          background: '#6CBDBA', 
+                          color: 'white', 
+                          border: 'none', 
+                          padding: '0.75rem 1.5rem', 
+                          borderRadius: '6px', 
+                          cursor: 'pointer',
+                          fontWeight: '600'
+                        }}
+                        disabled={aiGenerating}
+                      >
+                        Sélectionner un fichier
+                      </button>
+                      <input
+                        id="ai-file-input"
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => handleAIFileSelect(e.target.files[0])}
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {aiGenerating && (
+                <div style={{ textAlign: 'center', padding: '1rem' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🤖</div>
+                  <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600' }}>L'IA analyse votre cours...</p>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>
+                    Génération des cartes en cours, veuillez patienter.
+                  </p>
+                </div>
+              )}
+              
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button 
+                  type="button"
+                  onClick={handleAIClose}
+                  style={{ 
+                    background: 'transparent', 
+                    color: '#666', 
+                    border: '1px solid #ddd', 
+                    padding: '0.75rem 1.5rem', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer'
+                  }}
+                  disabled={aiGenerating}
+                >
+                  Annuler
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleAISubmit}
+                  style={{ 
+                    background: aiPdfFile ? '#6CBDBA' : '#ccc', 
+                    color: 'white', 
+                    border: 'none', 
+                    padding: '0.75rem 1.5rem', 
+                    borderRadius: '6px', 
+                    cursor: aiPdfFile ? 'pointer' : 'not-allowed',
+                    fontWeight: '600'
+                  }}
+                  disabled={aiGenerating || !aiPdfFile}
+                >
+                  {aiGenerating ? 'Génération...' : 'Générer les cartes'}
+                </button>
+              </div>
             </div>
           </div>
         )}

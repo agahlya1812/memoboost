@@ -909,6 +909,19 @@ function App() {
     }
   }
 
+  const handleAIGenerate = async (result) => {
+    try {
+      // Recharger les cartes pour afficher les nouvelles cartes générées
+      await fetchAndSetState({ silent: true })
+      
+      setNoticeTone('success')
+      setNotice(`🎉 ${result.cardsSaved} cartes générées par l'IA !`)
+    } catch (error) {
+      setNoticeTone('error')
+      setNotice('Erreur lors du rechargement des cartes.')
+    }
+  }
+
   const openImportExportModal = useCallback(() => {
     setImportExportModal({ isOpen: true })
   }, [])
@@ -1129,6 +1142,7 @@ function App() {
                     onAddCard={openAddCard}
                     onEvaluateCard={handleEvaluateCard}
                     onImageUpload={handleImageUpload}
+                    onAIGenerate={handleAIGenerate}
                     onStartRevision={startRevisionSession}
                     onClose={handleCloseEnvelope}
                   />
