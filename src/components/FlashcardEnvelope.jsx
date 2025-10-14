@@ -91,6 +91,8 @@ function FlashcardEnvelope({
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiPdfFile, setAiPdfFile] = useState(null)
   const [aiDragOver, setAiDragOver] = useState(false)
+  const [aiManualText, setAiManualText] = useState('')
+  const [aiUseManualText, setAiUseManualText] = useState(false)
   const pdfContainerRef = useRef(null)
   const openFilePicker = () => {
     if (fileInputRef.current) {
@@ -185,6 +187,8 @@ function FlashcardEnvelope({
     setAiGenerating(false)
     setAiPdfFile(null)
     setAiDragOver(false)
+    setAiManualText('')
+    setAiUseManualText(false)
   }
 
   const handleAIFileSelect = (file) => {
@@ -215,15 +219,35 @@ function FlashcardEnvelope({
   }
 
   const handleAISubmit = async () => {
-    if (!aiPdfFile) return
+    if (!aiPdfFile && !aiManualText.trim()) return
     
     setAiGenerating(true)
     try {
-      // Traiter le PDF avec l'IA
-      const result = await processPDFAndGenerateCards(aiPdfFile, folder.id, {
-        numberOfCards: 10,
-        difficulty: 'intermediate'
-      })
+      let result
+      
+      if (aiUseManualText && aiManualText.trim()) {
+        // Utiliser le texte manuel
+        console.log('Utilisation du texte manuel')
+        const cards = await generateCardsWithAI(aiManualText.trim(), {
+          numberOfCards: 10,
+          difficulty: 'intermediate'
+        })
+        
+        const savedCards = await saveGeneratedCards(cards, folder.id)
+        
+        result = {
+          success: true,
+          cardsGenerated: cards.length,
+          cardsSaved: savedCards.length,
+          cards: savedCards
+        }
+      } else {
+        // Traiter le PDF avec l'IA
+        result = await processPDFAndGenerateCards(aiPdfFile, folder.id, {
+          numberOfCards: 10,
+          difficulty: 'intermediate'
+        })
+      }
       
       console.log('Cartes générées:', result)
       
@@ -235,7 +259,14 @@ function FlashcardEnvelope({
       setShowAIModal(false)
     } catch (error) {
       console.error('Erreur lors de la génération IA:', error)
-      alert(`Erreur lors de la génération des cartes: ${error.message}`)
+      
+      // Si c'est une erreur d'extraction PDF, proposer l'option manuelle
+      if (error.message.includes('extraction') || error.message.includes('PDF')) {
+        setAiUseManualText(true)
+        alert(`Erreur d'extraction PDF: ${error.message}\n\nVous pouvez maintenant saisir le texte manuellement.`)
+      } else {
+        alert(`Erreur lors de la génération des cartes: ${error.message}`)
+      }
     } finally {
       setAiGenerating(false)
     }
@@ -359,19 +390,51 @@ function FlashcardEnvelope({
                   Importez votre cours en PDF et l'IA générera automatiquement des cartes de révision avec questions et réponses.
                 </p>
                 
-                <div 
-                  style={{ 
-                    border: `2px dashed ${aiDragOver ? '#6CBDBA' : '#ddd'}`, 
-                    borderRadius: '8px', 
-                    padding: '2rem', 
-                    textAlign: 'center', 
-                    background: aiDragOver ? '#f0f9ff' : '#f9f9f9',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onDragOver={handleAIDragOver}
-                  onDragLeave={handleAIDragLeave}
-                  onDrop={handleAIDrop}
-                >
+                {/* Option de saisie manuelle */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={aiUseManualText}
+                      onChange={(e) => setAiUseManualText(e.target.checked)}
+                      disabled={aiGenerating}
+                    />
+                    <span style={{ fontWeight: '600' }}>Saisir le texte manuellement</span>
+                  </label>
+                  
+                  {aiUseManualText && (
+                    <textarea
+                      value={aiManualText}
+                      onChange={(e) => setAiManualText(e.target.value)}
+                      placeholder="Collez ici le texte de votre cours..."
+                      style={{
+                        width: '100%',
+                        height: '200px',
+                        padding: '0.75rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        resize: 'vertical'
+                      }}
+                      disabled={aiGenerating}
+                    />
+                  )}
+                </div>
+                
+                {!aiUseManualText && (
+                  <div 
+                    style={{ 
+                      border: `2px dashed ${aiDragOver ? '#6CBDBA' : '#ddd'}`, 
+                      borderRadius: '8px', 
+                      padding: '2rem', 
+                      textAlign: 'center', 
+                      background: aiDragOver ? '#f0f9ff' : '#f9f9f9',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onDragOver={handleAIDragOver}
+                    onDragLeave={handleAIDragLeave}
+                    onDrop={handleAIDrop}
+                  >
                   {aiPdfFile ? (
                     <div>
                       <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</div>
@@ -428,7 +491,8 @@ function FlashcardEnvelope({
                       />
                     </div>
                   )}
-                </div>
+                  </div>
+                )}
               </div>
               
               {aiGenerating && (
@@ -461,15 +525,15 @@ function FlashcardEnvelope({
                   type="button"
                   onClick={handleAISubmit}
                   style={{ 
-                    background: aiPdfFile ? '#6CBDBA' : '#ccc', 
+                    background: (aiPdfFile || aiManualText.trim()) ? '#6CBDBA' : '#ccc', 
                     color: 'white', 
                     border: 'none', 
                     padding: '0.75rem 1.5rem', 
                     borderRadius: '6px', 
-                    cursor: aiPdfFile ? 'pointer' : 'not-allowed',
+                    cursor: (aiPdfFile || aiManualText.trim()) ? 'pointer' : 'not-allowed',
                     fontWeight: '600'
                   }}
-                  disabled={aiGenerating || !aiPdfFile}
+                  disabled={aiGenerating || (!aiPdfFile && !aiManualText.trim())}
                 >
                   {aiGenerating ? 'Génération...' : 'Générer les cartes'}
                 </button>

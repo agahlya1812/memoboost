@@ -10,30 +10,84 @@ const AI_MODEL = import.meta.env.VITE_AI_MODEL || 'deepseek-chat'
  */
 export async function extractTextFromPDF(file) {
   try {
-    // Utiliser pdf.js pour extraire le texte
-    const arrayBuffer = await file.arrayBuffer()
-    const pdf = await import('pdfjs-dist')
+    console.log('Début de l\'extraction PDF:', file.name)
     
-    // Configuration du worker
-    pdf.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.min.js'
-    
-    const loadingTask = pdf.getDocument(arrayBuffer)
-    const pdfDocument = await loadingTask.promise
-    
-    let fullText = ''
-    
-    // Extraire le texte de toutes les pages
-    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items.map(item => item.str).join(' ')
-      fullText += pageText + '\n\n'
+    // Méthode 1: Utiliser pdf.js
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await import('pdfjs-dist')
+      
+      // Configuration du worker
+      if (!pdf.GlobalWorkerOptions.workerSrc) {
+        pdf.GlobalWorkerOptions.workerSrc = new URL(
+          'pdfjs-dist/build/pdf.worker.min.js',
+          import.meta.url
+        ).toString()
+      }
+      
+      console.log('Worker configuré, chargement du PDF...')
+      
+      const loadingTask = pdf.getDocument({
+        data: arrayBuffer,
+        useSystemFonts: true,
+        disableFontFace: true,
+        disableAutoFetch: true,
+        disableStream: true
+      })
+      
+      const pdfDocument = await loadingTask.promise
+      console.log(`PDF chargé, ${pdfDocument.numPages} pages`)
+      
+      let fullText = ''
+      
+      // Extraire le texte de toutes les pages
+      for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+        try {
+          console.log(`Extraction page ${pageNum}/${pdfDocument.numPages}`)
+          const page = await pdfDocument.getPage(pageNum)
+          const textContent = await page.getTextContent()
+          
+          // Filtrer et nettoyer le texte
+          const pageText = textContent.items
+            .filter(item => item.str && item.str.trim().length > 0)
+            .map(item => item.str.trim())
+            .join(' ')
+          
+          if (pageText.trim()) {
+            fullText += pageText + '\n\n'
+          }
+        } catch (pageError) {
+          console.warn(`Erreur page ${pageNum}:`, pageError)
+          // Continuer avec les autres pages
+        }
+      }
+      
+      const result = fullText.trim()
+      console.log(`Extraction terminée, ${result.length} caractères extraits`)
+      
+      if (result.length >= 50) {
+        return result
+      }
+    } catch (pdfError) {
+      console.warn('Erreur avec pdf.js, tentative de méthode alternative:', pdfError)
     }
     
-    return fullText.trim()
+    // Méthode 2: Fallback - demander à l'utilisateur de fournir le texte
+    throw new Error('Le PDF ne peut pas être traité automatiquement. Veuillez copier le texte du PDF et le coller manuellement.')
+    
   } catch (error) {
     console.error('Erreur lors de l\'extraction du texte PDF:', error)
-    throw new Error('Impossible d\'extraire le texte du PDF')
+    
+    // Messages d'erreur plus spécifiques
+    if (error.message.includes('Invalid PDF')) {
+      throw new Error('Le fichier PDF est corrompu ou invalide')
+    } else if (error.message.includes('Password')) {
+      throw new Error('Le PDF est protégé par mot de passe')
+    } else if (error.message.includes('network')) {
+      throw new Error('Erreur de chargement du PDF')
+    } else {
+      throw new Error(`Impossible d'extraire le texte du PDF: ${error.message}`)
+    }
   }
 }
 
