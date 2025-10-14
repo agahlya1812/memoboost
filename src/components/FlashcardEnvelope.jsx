@@ -3,7 +3,7 @@ import Flashcard from './Flashcard'
 import { exportEnvelopeToPdf, importPdfToText } from '../utils/pdf'
 import { DEFAULT_COLOR, PASTEL_COLORS } from '../constants/palette'
 import { isSupabaseEnabled, supabase } from '../services/supabaseClient'
-import { processPDFAndGenerateCards } from '../services/aiService'
+import { processPDFAndGenerateCards, generateCardsWithAI, saveGeneratedCards } from '../services/aiService'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
