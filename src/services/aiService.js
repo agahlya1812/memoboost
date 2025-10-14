@@ -1,9 +1,9 @@
 import { isSupabaseEnabled, supabase } from './supabaseClient'
 
-// Configuration de l'API IA (OpenAI ou Claude)
+// Configuration de l'API IA (OpenAI, Claude ou DeepSeek)
 const AI_API_KEY = import.meta.env.VITE_AI_API_KEY || ''
-const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'https://api.openai.com/v1'
-const AI_MODEL = import.meta.env.VITE_AI_MODEL || 'gpt-4'
+const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'https://api.deepseek.com/v1'
+const AI_MODEL = import.meta.env.VITE_AI_MODEL || 'deepseek-chat'
 
 /**
  * Extrait le texte d'un PDF
@@ -59,13 +59,14 @@ TEXTE À ANALYSER:
 ${text}
 
 INSTRUCTIONS:
-1. Crée des questions claires et précises
+1. Crée des questions claires et précises en français
 2. Fournis des réponses complètes mais concises
 3. Varie les types de questions (définition, application, analyse, etc.)
 4. Adapte le niveau de difficulté: ${difficulty}
 5. Assure-toi que les questions sont pertinentes au contenu
+6. Utilise un langage accessible et pédagogique
 
-FORMAT DE RÉPONSE (JSON):
+FORMAT DE RÉPONSE (JSON uniquement, pas de texte avant ou après):
 {
   "cards": [
     {
@@ -75,7 +76,7 @@ FORMAT DE RÉPONSE (JSON):
   ]
 }
 
-Génère exactement ${numberOfCards} cartes de révision de qualité.
+Génère exactement ${numberOfCards} cartes de révision de qualité. Réponds uniquement en JSON valide.
 `
 
   try {
