@@ -1165,21 +1165,6 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
-.flashcard-envelope-action.ai {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  font-weight: 600;
-}
-
-.flashcard-envelope-action.ai:hover,
-.flashcard-envelope-action.ai:focus {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-  border-color: rgba(102, 126, 234, 0.5);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
 .flashcard-envelope-action:hover,
 .flashcard-envelope-action:focus {
   background: rgba(255, 255, 255, 0.4);
