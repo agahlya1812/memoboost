@@ -2224,7 +2224,11 @@
 .note-editor-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 1.25rem;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .note-editor-content .tiptap {
@@ -2233,6 +2237,17 @@
   font-size: 0.95rem;
   line-height: 1.7;
   color: #1a1a2e;
+  width: 100%;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.note-editor-content .tiptap * {
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .note-editor-content .tiptap h1 { font-size: 1.6rem; margin: 0.75rem 0 0.5rem; }
