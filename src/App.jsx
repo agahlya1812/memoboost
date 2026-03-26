@@ -1170,6 +1170,7 @@ function App() {
                 onEdit={handleEditFolder}
                 onDelete={handleDeleteFolder}
                 notes={isRootLevel ? [] : notes}
+                noteColor={listingParentCategory?.color}
                 onOpenNote={openEditNote}
                 onDeleteNote={handleDeleteNote}
                 emptyMessage={folderGridEmptyMessage}

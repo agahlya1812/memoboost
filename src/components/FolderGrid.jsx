@@ -7,6 +7,7 @@ function FolderGrid({
   onEdit,
   onDelete,
   notes = [],
+  noteColor,
   onOpenNote,
   onDeleteNote,
   emptyMessage = 'Aucun dossier a afficher ici.',
@@ -40,6 +41,7 @@ function FolderGrid({
         <NoteCard
           key={note.id}
           note={note}
+          color={noteColor}
           onOpen={onOpenNote}
           onDelete={onDeleteNote}
         />
