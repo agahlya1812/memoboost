@@ -2118,6 +2118,34 @@
   overflow: hidden;
 }
 
+/* Mode colonnes : le panel scroll verticalement */
+.note-editor-panel--columns {
+  height: auto;
+  max-height: min(90vh, 700px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.note-editor-panel--columns .note-editor-header,
+.note-editor-panel--columns .note-editor-toolbar {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 2;
+}
+
+.note-editor-panel--columns .note-editor-footer {
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  z-index: 2;
+}
+
+.note-editor-panel--columns .note-editor-content {
+  flex: none;
+  overflow-y: visible;
+}
+
 .note-editor-header {
   display: flex;
   align-items: center;

@@ -160,7 +160,7 @@ function NoteEditor({ note, onSave, onClose }) {
   return (
     <div className="note-editor-overlay" role="dialog" aria-modal="true" onKeyDown={handleKeyDown}>
       <div className="note-editor-backdrop" onClick={onClose} />
-      <div className="note-editor-panel">
+      <div className={`note-editor-panel${columns > 1 ? ' note-editor-panel--columns' : ''}`}>
         <div className="note-editor-header">
           <input
             className="note-editor-title"
