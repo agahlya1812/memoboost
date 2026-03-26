@@ -2119,33 +2119,6 @@
 }
 
 /* Mode colonnes : le panel scroll verticalement */
-.note-editor-panel--columns {
-  height: auto;
-  max-height: min(90vh, 700px);
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.note-editor-panel--columns .note-editor-header,
-.note-editor-panel--columns .note-editor-toolbar {
-  position: sticky;
-  top: 0;
-  background: #ffffff;
-  z-index: 2;
-}
-
-.note-editor-panel--columns .note-editor-footer {
-  position: sticky;
-  bottom: 0;
-  background: #ffffff;
-  z-index: 2;
-}
-
-.note-editor-panel--columns .note-editor-content {
-  flex: none;
-  overflow-y: visible;
-}
-
 .note-editor-header {
   display: flex;
   align-items: center;
@@ -2234,20 +2207,33 @@
 .note-editor-content .tiptap {
   min-height: 200px;
   outline: none;
+  display: block;
   font-size: 0.95rem;
   line-height: 1.7;
   color: #1a1a2e;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   word-break: break-word;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+  column-count: auto;
+  column-gap: 0;
 }
 
 .note-editor-content .tiptap * {
   max-width: 100%;
   word-break: break-word;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.note-editor-content .tiptap p,
+.note-editor-content .tiptap li,
+.note-editor-content .tiptap blockquote,
+.note-editor-content .tiptap h1,
+.note-editor-content .tiptap h2,
+.note-editor-content .tiptap pre {
+  white-space: inherit;
 }
 
 .note-editor-content .tiptap h1 { font-size: 1.6rem; margin: 0.75rem 0 0.5rem; }
@@ -2355,6 +2341,3 @@
 }
 
 /* Multi-column note content */
-.note-editor-content[style*="column-count"] .tiptap {
-  column-fill: balance;
-}

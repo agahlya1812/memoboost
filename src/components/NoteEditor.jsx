@@ -61,7 +61,6 @@ function NoteEditor({ note, onSave, onClose }) {
   const [title, setTitle] = useState(note?.title || '')
   const [showTextColor, setShowTextColor] = useState(false)
   const [showHighlight, setShowHighlight] = useState(false)
-  const [columns, setColumns] = useState(1)
   const [exporting, setExporting] = useState(false)
   const contentRef = useRef(null)
 
@@ -78,7 +77,6 @@ function NoteEditor({ note, onSave, onClose }) {
 
   useEffect(() => {
     setTitle(note?.title || '')
-    setColumns(1)
     if (editor) editor.commands.setContent(note?.content || '')
   }, [note?.id])
 
@@ -160,7 +158,7 @@ function NoteEditor({ note, onSave, onClose }) {
   return (
     <div className="note-editor-overlay" role="dialog" aria-modal="true" onKeyDown={handleKeyDown}>
       <div className="note-editor-backdrop" onClick={onClose} />
-      <div className={`note-editor-panel${columns > 1 ? ' note-editor-panel--columns' : ''}`}>
+      <div className="note-editor-panel">
         <div className="note-editor-header">
           <input
             className="note-editor-title"
@@ -238,13 +236,6 @@ function NoteEditor({ note, onSave, onClose }) {
 
           <span className="note-editor-toolbar-sep" />
 
-          {/* Colonnes */}
-          <button type="button" className={columns === 1 ? 'active' : ''} onClick={() => setColumns(1)} title="1 colonne">▐</button>
-          <button type="button" className={columns === 2 ? 'active' : ''} onClick={() => setColumns(2)} title="2 colonnes">▐▐</button>
-          <button type="button" className={columns === 3 ? 'active' : ''} onClick={() => setColumns(3)} title="3 colonnes">▐▐▐</button>
-
-          <span className="note-editor-toolbar-sep" />
-
           {/* Autres */}
           <button type="button" className={editor?.isActive('blockquote') ? 'active' : ''} onClick={() => editor?.chain().focus().toggleBlockquote().run()} title="Citation">❝</button>
           <button type="button" className={editor?.isActive('code') ? 'active' : ''} onClick={() => editor?.chain().focus().toggleCode().run()} title="Code">{'</>'}</button>
@@ -266,7 +257,6 @@ function NoteEditor({ note, onSave, onClose }) {
         <div
           ref={contentRef}
           className="note-editor-content"
-          style={{ columnCount: columns, columnGap: columns > 1 ? '2rem' : undefined }}
         >
           <EditorContent editor={editor} />
         </div>
