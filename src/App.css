@@ -2284,3 +2284,30 @@
   outline: 2px solid #60a5fa;
   outline-offset: 2px;
 }
+
+/* PDF button in note toolbar */
+.note-editor-pdf-btn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #5eada0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5eada0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.note-editor-pdf-btn:hover {
+  background: #e0f2f1;
+}
+
+.note-editor-pdf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Multi-column note content */
+.note-editor-content[style*="column-count"] .tiptap {
+  column-fill: balance;
+}

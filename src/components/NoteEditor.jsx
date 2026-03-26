@@ -5,6 +5,8 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import { Highlight } from '@tiptap/extension-highlight'
 import { TextAlign } from '@tiptap/extension-text-align'
+import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 
 const PASTEL_TEXT_COLORS = [
   { label: 'Défaut', value: null },
@@ -59,6 +61,9 @@ function NoteEditor({ note, onSave, onClose }) {
   const [title, setTitle] = useState(note?.title || '')
   const [showTextColor, setShowTextColor] = useState(false)
   const [showHighlight, setShowHighlight] = useState(false)
+  const [columns, setColumns] = useState(1)
+  const [exporting, setExporting] = useState(false)
+  const contentRef = useRef(null)
 
   const editor = useEditor({
     extensions: [
@@ -73,12 +78,76 @@ function NoteEditor({ note, onSave, onClose }) {
 
   useEffect(() => {
     setTitle(note?.title || '')
+    setColumns(1)
     if (editor) editor.commands.setContent(note?.content || '')
   }, [note?.id])
 
   const handleSave = () => {
     if (!editor) return
     onSave({ title: title.trim() || 'Note sans titre', content: editor.getHTML() })
+  }
+
+  const handleExportPdf = async () => {
+    if (!contentRef.current || exporting) return
+    setExporting(true)
+    try {
+      const el = contentRef.current
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+      const imgData = canvas.toDataURL('image/png')
+
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 40
+
+      // Titre
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text(title || 'Note sans titre', margin, margin + 14)
+
+      // Ligne séparatrice
+      doc.setDrawColor(200)
+      doc.line(margin, margin + 26, pageW - margin, margin + 26)
+
+      // Contenu (image)
+      const imgW = pageW - margin * 2
+      const imgH = (canvas.height / canvas.width) * imgW
+      const startY = margin + 40
+
+      // Découper l'image sur plusieurs pages si nécessaire
+      const availH = pageH - startY - margin
+      if (imgH <= availH) {
+        doc.addImage(imgData, 'PNG', margin, startY, imgW, imgH)
+      } else {
+        let remainH = imgH
+        let srcY = 0
+        let firstPage = true
+        while (remainH > 0) {
+          const sliceH = firstPage ? availH : pageH - margin * 2
+          const ratio = sliceH / imgH
+          const srcSliceH = canvas.height * ratio
+          const sliceCanvas = document.createElement('canvas')
+          sliceCanvas.width = canvas.width
+          sliceCanvas.height = srcSliceH
+          const ctx = sliceCanvas.getContext('2d')
+          ctx.drawImage(canvas, 0, srcY, canvas.width, srcSliceH, 0, 0, canvas.width, srcSliceH)
+          const sliceData = sliceCanvas.toDataURL('image/png')
+          const destY = firstPage ? startY : margin
+          doc.addImage(sliceData, 'PNG', margin, destY, imgW, Math.min(sliceH, remainH))
+          srcY += srcSliceH
+          remainH -= sliceH
+          if (remainH > 0) doc.addPage()
+          firstPage = false
+        }
+      }
+
+      const filename = `${(title || 'note').replace(/[^a-z0-9-_]+/gi, '_')}.pdf`
+      doc.save(filename)
+    } catch (err) {
+      console.error('Export PDF impossible', err)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const handleKeyDown = (e) => {
@@ -112,14 +181,9 @@ function NoteEditor({ note, onSave, onClose }) {
 
           <span className="note-editor-toolbar-sep" />
 
-          {/* Couleur de texte */}
+          {/* Couleur texte */}
           <div className="note-toolbar-color-wrapper">
-            <button
-              type="button"
-              className={showTextColor ? 'active' : ''}
-              title="Couleur du texte"
-              onClick={() => { setShowTextColor((v) => !v); setShowHighlight(false) }}
-            >
+            <button type="button" className={showTextColor ? 'active' : ''} title="Couleur du texte" onClick={() => { setShowTextColor((v) => !v); setShowHighlight(false) }}>
               <span style={{ borderBottom: `3px solid ${activeTextColor || '#333'}`, lineHeight: 1 }}>A</span>
             </button>
             {showTextColor && (
@@ -137,12 +201,7 @@ function NoteEditor({ note, onSave, onClose }) {
 
           {/* Surlignage */}
           <div className="note-toolbar-color-wrapper">
-            <button
-              type="button"
-              className={showHighlight ? 'active' : ''}
-              title="Surligner"
-              onClick={() => { setShowHighlight((v) => !v); setShowTextColor(false) }}
-            >
+            <button type="button" className={showHighlight ? 'active' : ''} title="Surligner" onClick={() => { setShowHighlight((v) => !v); setShowTextColor(false) }}>
               <span style={{ background: activeHighlight || 'transparent', padding: '0 2px', borderRadius: 2 }}>✎</span>
             </button>
             {showHighlight && (
@@ -173,18 +232,44 @@ function NoteEditor({ note, onSave, onClose }) {
           <span className="note-editor-toolbar-sep" />
 
           {/* Alignement */}
-          <button type="button" className={editor?.isActive({ textAlign: 'left' }) ? 'active' : ''} onClick={() => editor?.chain().focus().setTextAlign('left').run()} title="Aligner à gauche">⬅</button>
+          <button type="button" className={editor?.isActive({ textAlign: 'left' }) ? 'active' : ''} onClick={() => editor?.chain().focus().setTextAlign('left').run()} title="Gauche">⬅</button>
           <button type="button" className={editor?.isActive({ textAlign: 'center' }) ? 'active' : ''} onClick={() => editor?.chain().focus().setTextAlign('center').run()} title="Centrer">≡</button>
           <button type="button" className={editor?.isActive({ textAlign: 'justify' }) ? 'active' : ''} onClick={() => editor?.chain().focus().setTextAlign('justify').run()} title="Justifier">☰</button>
+
+          <span className="note-editor-toolbar-sep" />
+
+          {/* Colonnes */}
+          <button type="button" className={columns === 1 ? 'active' : ''} onClick={() => setColumns(1)} title="1 colonne">▐</button>
+          <button type="button" className={columns === 2 ? 'active' : ''} onClick={() => setColumns(2)} title="2 colonnes">▐▐</button>
+          <button type="button" className={columns === 3 ? 'active' : ''} onClick={() => setColumns(3)} title="3 colonnes">▐▐▐</button>
 
           <span className="note-editor-toolbar-sep" />
 
           {/* Autres */}
           <button type="button" className={editor?.isActive('blockquote') ? 'active' : ''} onClick={() => editor?.chain().focus().toggleBlockquote().run()} title="Citation">❝</button>
           <button type="button" className={editor?.isActive('code') ? 'active' : ''} onClick={() => editor?.chain().focus().toggleCode().run()} title="Code">{'</>'}</button>
+
+          <span className="note-editor-toolbar-sep" />
+
+          {/* Export PDF */}
+          <button
+            type="button"
+            className="note-editor-pdf-btn"
+            onClick={handleExportPdf}
+            disabled={exporting}
+            title="Exporter en PDF"
+          >
+            {exporting ? '...' : '⬇ PDF'}
+          </button>
         </div>
 
-        <EditorContent editor={editor} className="note-editor-content" />
+        <div
+          ref={contentRef}
+          className="note-editor-content"
+          style={{ columnCount: columns, columnGap: columns > 1 ? '2rem' : undefined }}
+        >
+          <EditorContent editor={editor} />
+        </div>
 
         <div className="note-editor-footer">
           <button type="button" className="note-editor-btn note-editor-btn--cancel" onClick={onClose}>Annuler</button>
