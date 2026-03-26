@@ -427,3 +427,78 @@ export async function updateCardImage(cardId, imageUrl) {
   })
   return data.card
 }
+
+export async function fetchNotes(categoryId) {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id
+    if (!userId) return []
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('category_id', categoryId)
+      .order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data || []).map((n) => ({
+      id: n.id,
+      title: n.title,
+      content: n.content,
+      categoryId: n.category_id,
+      createdAt: n.created_at,
+      updatedAt: n.updated_at
+    }))
+  }
+  return []
+}
+
+export async function createNote(payload) {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id
+    if (!userId) throw new Error('Non authentifié')
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({
+        user_id: userId,
+        category_id: payload.categoryId,
+        title: payload.title || 'Note sans titre',
+        content: payload.content || ''
+      })
+      .select('*')
+      .single()
+    if (error) throw new Error(error.message)
+    return { id: data.id, title: data.title, content: data.content, categoryId: data.category_id, createdAt: data.created_at, updatedAt: data.updated_at }
+  }
+  throw new Error('Supabase non configuré')
+}
+
+export async function updateNote(id, payload) {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id
+    if (!userId) throw new Error('Non authentifié')
+    const { data, error } = await supabase
+      .from('notes')
+      .update({ title: payload.title, content: payload.content, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('*')
+      .single()
+    if (error) throw new Error(error.message)
+    return { id: data.id, title: data.title, content: data.content, categoryId: data.category_id, createdAt: data.created_at, updatedAt: data.updated_at }
+  }
+  throw new Error('Supabase non configuré')
+}
+
+export async function deleteNote(id) {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id
+    if (!userId) throw new Error('Non authentifié')
+    const { error } = await supabase.from('notes').delete().eq('id', id).eq('user_id', userId)
+    if (error) throw new Error(error.message)
+    return null
+  }
+  throw new Error('Supabase non configuré')
+}

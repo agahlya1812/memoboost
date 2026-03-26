@@ -1,10 +1,14 @@
 import FolderCard from './FolderCard'
+import NoteCard from './NoteCard'
 
 function FolderGrid({
   folders,
   onOpen,
   onEdit,
   onDelete,
+  notes = [],
+  onOpenNote,
+  onDeleteNote,
   emptyMessage = 'Aucun dossier a afficher ici.',
   variant = 'folder'
 }) {
@@ -12,7 +16,7 @@ function FolderGrid({
     .filter(Boolean)
     .join(' ')
 
-  if (!folders.length) {
+  if (!folders.length && !notes.length) {
     return (
       <section className={`${baseClassName} empty`}>
         <p>{emptyMessage}</p>
@@ -30,6 +34,14 @@ function FolderGrid({
           onEdit={onEdit}
           onDelete={onDelete}
           variant={variant}
+        />
+      ))}
+      {notes.map((note) => (
+        <NoteCard
+          key={note.id}
+          note={note}
+          onOpen={onOpenNote}
+          onDelete={onDeleteNote}
         />
       ))}
     </section>

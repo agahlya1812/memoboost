@@ -34,6 +34,14 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon
 npm run deploy
 ```
 
+Pour le workflow GitHub Actions, ajouter dans le repository GitHub :
+
+- `Settings > Secrets and variables > Actions > New repository secret`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Sinon le build GitHub n'embarquera pas la configuration Supabase attendue.
+
 ### Render (avec variables d'environnement)
 1. Connecter le repo GitHub
 2. Configurer les variables d'environnement :

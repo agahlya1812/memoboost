@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import FolderGrid from './components/FolderGrid'
 import ItemPanel from './components/ItemPanel'
 import FlashcardEnvelope from './components/FlashcardEnvelope'
 import RevisionModal from './components/RevisionModal'
 import ImportExportModal from './components/ImportExportModal'
+import NoteEditor from './components/NoteEditor'
 import {
   clearAuthUserId,
   createCard,
   createCategory,
+  createNote,
   deleteCard,
   deleteCategory,
+  deleteNote,
+  fetchNotes,
   fetchState,
   loginUser,
   registerUser,
@@ -18,6 +22,7 @@ import {
   updateCard,
   updateCardStatus,
   updateCategory,
+  updateNote,
   uploadCardImage,
   updateCardImage
 } from './services/api'
@@ -77,6 +82,10 @@ function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const [panelState, setPanelState] = useState(defaultPanelState)
+  const [notes, setNotes] = useState([])
+  const [showFabMenu, setShowFabMenu] = useState(false)
+  const [noteEditorState, setNoteEditorState] = useState({ isOpen: false, note: null })
+  const fabMenuRef = useRef(null)
 
   useEffect(() => {
     try {
@@ -159,6 +168,23 @@ function App() {
       navigate('/', { replace: true })
     }
   }, [categories, currentFolderId, navigate])
+
+  useEffect(() => {
+    if (!currentFolderId || !currentUser) {
+      setNotes([])
+      return
+    }
+    fetchNotes(currentFolderId).then(setNotes).catch(() => setNotes([]))
+  }, [currentFolderId, currentUser])
+
+  useEffect(() => {
+    if (!showFabMenu) return
+    const close = (e) => {
+      if (!fabMenuRef.current?.contains(e.target)) setShowFabMenu(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [showFabMenu])
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
 
@@ -421,6 +447,46 @@ function App() {
   const openFolder = (folderId) => {
     resetNotice()
     goToFolder(folderId)
+  }
+
+  const openAddNote = () => {
+    setShowFabMenu(false)
+    setNoteEditorState({ isOpen: true, note: null })
+  }
+
+  const openEditNote = (note) => {
+    setNoteEditorState({ isOpen: true, note })
+  }
+
+  const closeNoteEditor = () => {
+    setNoteEditorState({ isOpen: false, note: null })
+  }
+
+  const handleSaveNote = async (payload) => {
+    try {
+      if (noteEditorState.note) {
+        const updated = await updateNote(noteEditorState.note.id, payload)
+        setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
+      } else {
+        const created = await createNote({ ...payload, categoryId: currentFolderId })
+        setNotes((prev) => [created, ...prev])
+      }
+      closeNoteEditor()
+    } catch (err) {
+      setNoticeTone('warning')
+      setNotice(err.message || 'Impossible de sauvegarder la note.')
+    }
+  }
+
+  const handleDeleteNote = async (note) => {
+    if (!window.confirm(`Supprimer la note "${note.title}" ?`)) return
+    try {
+      await deleteNote(note.id)
+      setNotes((prev) => prev.filter((n) => n.id !== note.id))
+    } catch (err) {
+      setNoticeTone('warning')
+      setNotice(err.message || 'Impossible de supprimer la note.')
+    }
   }
 
   const handleEditCard = (card) => {
@@ -1004,7 +1070,7 @@ function App() {
     }
 
     if (!isEnvelopeView) {
-      openAddFolder()
+      setShowFabMenu((v) => !v)
       return
     }
 
@@ -1103,6 +1169,9 @@ function App() {
                 onOpen={openFolder}
                 onEdit={handleEditFolder}
                 onDelete={handleDeleteFolder}
+                notes={isRootLevel ? [] : notes}
+                onOpenNote={openEditNote}
+                onDeleteNote={handleDeleteNote}
                 emptyMessage={folderGridEmptyMessage}
                 variant={folderGridVariant}
               />
@@ -1140,16 +1209,28 @@ function App() {
         )}
       </main>
 
-      <button
-        type="button"
-        className="floating-add"
-        onClick={handleFloatingAction}
-        aria-label={floatingActionLabel}
-        title={floatingActionLabel}
-        disabled={!isAuthenticated}
-      >
-        +
-      </button>
+      <div className="floating-add-wrapper" ref={fabMenuRef}>
+        {showFabMenu && (
+          <div className="fab-menu">
+            <button type="button" className="fab-menu-item" onClick={openAddFolder}>
+              <span>📁</span> Nouvelle enveloppe
+            </button>
+            <button type="button" className="fab-menu-item" onClick={openAddNote}>
+              <span>📝</span> Nouvelle note
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          className={`floating-add${showFabMenu ? ' floating-add--open' : ''}`}
+          onClick={handleFloatingAction}
+          aria-label={floatingActionLabel}
+          title={floatingActionLabel}
+          disabled={!isAuthenticated}
+        >
+          +
+        </button>
+      </div>
 
       {panelState.isOpen && (
         <ItemPanel
@@ -1177,6 +1258,14 @@ function App() {
           onClose={stopRevisionSession}
           onReveal={handleRevisionReveal}
           onEvaluate={handleRevisionEvaluate}
+        />
+      )}
+
+      {noteEditorState.isOpen && (
+        <NoteEditor
+          note={noteEditorState.note}
+          onSave={handleSaveNote}
+          onClose={closeNoteEditor}
         />
       )}
 

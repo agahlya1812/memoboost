@@ -2020,3 +2020,230 @@
   height: 38px;
   object-fit: contain;
 }
+
+/* ========== Floating Action Button Menu ========== */
+.floating-add-wrapper {
+  position: fixed;
+  right: clamp(1.5rem, 6vw, 3rem);
+  bottom: clamp(1.5rem, 6vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  z-index: 50;
+}
+
+.floating-add {
+  position: static;
+}
+
+.fab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+  margin-bottom: 0.25rem;
+}
+
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #ffffff;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,0.14);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: #333;
+}
+
+.fab-menu-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15,23,42,0.18);
+}
+
+.floating-add--open {
+  transform: rotate(45deg);
+}
+
+/* ========== Note Card ========== */
+.note-card {
+  cursor: pointer;
+}
+
+.note-card-illustration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  background: linear-gradient(140deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 16px;
+  margin-bottom: 0.5rem;
+}
+
+.note-card-icon {
+  font-size: 2.5rem;
+}
+
+/* ========== Note Editor ========== */
+.note-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.note-editor-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.note-editor-panel {
+  position: relative;
+  width: min(860px, 96vw);
+  height: min(90vh, 700px);
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note-editor-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.note-editor-title {
+  flex: 1;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border: none;
+  outline: none;
+  color: #1a1a2e;
+  background: transparent;
+}
+
+.note-editor-title::placeholder {
+  color: #aaa;
+}
+
+.note-editor-close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #555;
+  line-height: 1;
+}
+
+.note-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  flex-wrap: wrap;
+}
+
+.note-editor-toolbar button {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #444;
+  transition: background 0.15s;
+}
+
+.note-editor-toolbar button:hover {
+  background: #f1f5f9;
+}
+
+.note-editor-toolbar button.active {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.note-editor-toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: #e2e8f0;
+  margin: 0 0.25rem;
+}
+
+.note-editor-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+}
+
+.note-editor-content .tiptap {
+  min-height: 200px;
+  outline: none;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #1a1a2e;
+}
+
+.note-editor-content .tiptap h1 { font-size: 1.6rem; margin: 0.75rem 0 0.5rem; }
+.note-editor-content .tiptap h2 { font-size: 1.25rem; margin: 0.75rem 0 0.5rem; }
+.note-editor-content .tiptap ul, .note-editor-content .tiptap ol { padding-left: 1.5rem; }
+.note-editor-content .tiptap blockquote { border-left: 3px solid #7dd3fc; padding-left: 1rem; color: #64748b; margin: 0.5rem 0; }
+.note-editor-content .tiptap code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 4px; font-family: monospace; font-size: 0.88em; }
+.note-editor-content .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+.note-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.note-editor-btn {
+  padding: 0.55rem 1.4rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.note-editor-btn:hover {
+  transform: translateY(-1px);
+}
+
+.note-editor-btn--cancel {
+  background: #f1f5f9;
+  color: #555;
+}
+
+.note-editor-btn--save {
+  background: #5eada0;
+  color: #ffffff;
+}
