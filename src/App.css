@@ -2247,3 +2247,40 @@
   background: #5eada0;
   color: #ffffff;
 }
+
+/* ========== Color Picker (Note Editor) ========== */
+.note-toolbar-color-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.note-color-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(15,23,42,0.16);
+  z-index: 200;
+  flex-wrap: wrap;
+  width: 164px;
+}
+
+.note-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s;
+  padding: 0;
+}
+
+.note-color-swatch:hover,
+.note-color-swatch.active {
+  transform: scale(1.25);
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
