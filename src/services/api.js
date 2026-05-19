@@ -452,6 +452,29 @@ export async function fetchNotes(categoryId) {
   return []
 }
 
+export async function fetchAllNotes() {
+  if (isSupabaseEnabled) {
+    const session = await supabase.auth.getSession()
+    const userId = session?.data?.session?.user?.id
+    if (!userId) return []
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data || []).map((n) => ({
+      id: n.id,
+      title: n.title,
+      content: n.content,
+      categoryId: n.category_id,
+      createdAt: n.created_at,
+      updatedAt: n.updated_at
+    }))
+  }
+  return []
+}
+
 export async function createNote(payload) {
   if (isSupabaseEnabled) {
     const session = await supabase.auth.getSession()

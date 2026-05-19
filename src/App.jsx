@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import Dashboard from './components/Dashboard'
 import FolderGrid from './components/FolderGrid'
 import ItemPanel from './components/ItemPanel'
 import FlashcardEnvelope from './components/FlashcardEnvelope'
@@ -14,7 +15,7 @@ import {
   deleteCard,
   deleteCategory,
   deleteNote,
-  fetchNotes,
+  fetchAllNotes,
   fetchState,
   loginUser,
   registerUser,
@@ -59,6 +60,74 @@ const defaultRevisionSession = {
 }
 
 const STORAGE_USER_KEY = 'memoboost-user'
+const FAVORITES_STORAGE_PREFIX = 'memoboost-favorites'
+const defaultFavorites = { categories: [], notes: [] }
+
+function getFavoritesStorageKey(userId) {
+  return `${FAVORITES_STORAGE_PREFIX}:${userId}`
+}
+
+function readFavoritesFromStorage(userId) {
+  if (!userId) {
+    return defaultFavorites
+  }
+
+  try {
+    const raw = window.localStorage.getItem(getFavoritesStorageKey(userId))
+    if (!raw) {
+      return defaultFavorites
+    }
+
+    const parsed = JSON.parse(raw)
+    return {
+      categories: Array.isArray(parsed?.categories) ? parsed.categories : [],
+      notes: Array.isArray(parsed?.notes) ? parsed.notes : []
+    }
+  } catch (error) {
+    console.warn('Impossible de lire les favoris locaux', error)
+    return defaultFavorites
+  }
+}
+
+function writeFavoritesToStorage(userId, favorites) {
+  if (!userId) {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(getFavoritesStorageKey(userId), JSON.stringify(favorites))
+  } catch (error) {
+    console.warn('Impossible de sauvegarder les favoris locaux', error)
+  }
+}
+
+function formatRelativeDate(value) {
+  if (!value) {
+    return ''
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const oneDay = 24 * 60 * 60 * 1000
+
+  if (diffMs < oneDay) {
+    return "Aujourd'hui"
+  }
+
+  if (diffMs < 2 * oneDay) {
+    return 'Hier'
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'short'
+  }).format(date)
+}
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -82,7 +151,8 @@ function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const [panelState, setPanelState] = useState(defaultPanelState)
-  const [notes, setNotes] = useState([])
+  const [allNotes, setAllNotes] = useState([])
+  const [favorites, setFavorites] = useState(defaultFavorites)
   const [showFabMenu, setShowFabMenu] = useState(false)
   const [noteEditorState, setNoteEditorState] = useState({ isOpen: false, note: null })
   const fabMenuRef = useRef(null)
@@ -133,7 +203,8 @@ function App() {
         }
         setCards([])
         setCategories([])
-        return { cards: [], categories: [] }
+        setAllNotes([])
+        return { cards: [], categories: [], notes: [] }
       }
 
       if (!silent) {
@@ -141,9 +212,10 @@ function App() {
       }
 
       try {
-        const data = await fetchState()
+        const [data, notesData] = await Promise.all([fetchState(), fetchAllNotes()])
         setCards(data.cards || [])
         setCategories(normalizeCategories(data.categories || []))
+        setAllNotes(notesData || [])
         if (data.user && currentUser && currentUser.id === data.user.id) {
           if (currentUser.email !== data.user.email || currentUser.name !== data.user.name) {
             setCurrentUser((prev) => ({ ...prev, ...data.user }))
@@ -151,7 +223,7 @@ function App() {
         }
         setError('')
         setStatus('ready')
-        return data
+        return { ...data, notes: notesData || [] }
       } catch (err) {
         const message = err.message || 'Impossible de charger les donnees.'
         setError(message)
@@ -170,12 +242,38 @@ function App() {
   }, [categories, currentFolderId, navigate])
 
   useEffect(() => {
-    if (!currentFolderId || !currentUser) {
-      setNotes([])
+    if (currentUser?.id) {
+      setFavorites(readFavoritesFromStorage(currentUser.id))
       return
     }
-    fetchNotes(currentFolderId).then(setNotes).catch(() => setNotes([]))
-  }, [currentFolderId, currentUser])
+
+    setFavorites(defaultFavorites)
+  }, [currentUser?.id])
+
+  useEffect(() => {
+    writeFavoritesToStorage(currentUser?.id, favorites)
+  }, [currentUser?.id, favorites])
+
+  useEffect(() => {
+    setFavorites((prev) => {
+      const categoryIds = new Set(categories.map((category) => category.id))
+      const noteIds = new Set(allNotes.map((note) => note.id))
+
+      const next = {
+        categories: prev.categories.filter((id) => categoryIds.has(id)),
+        notes: prev.notes.filter((id) => noteIds.has(id))
+      }
+
+      if (
+        next.categories.length === prev.categories.length &&
+        next.notes.length === prev.notes.length
+      ) {
+        return prev
+      }
+
+      return next
+    })
+  }, [allNotes, categories])
 
   useEffect(() => {
     if (!showFabMenu) return
@@ -187,6 +285,9 @@ function App() {
   }, [showFabMenu])
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
+  const noteMap = useMemo(() => new Map(allNotes.map((note) => [note.id, note])), [allNotes])
+  const favoriteCategoryIds = useMemo(() => new Set(favorites.categories), [favorites.categories])
+  const favoriteNoteIds = useMemo(() => new Set(favorites.notes), [favorites.notes])
 
   const slugMappings = useMemo(() => {
     const slugToId = new Map()
@@ -336,6 +437,12 @@ function App() {
   const activeEnvelope = isEnvelopeView ? selectedCategory : null
   const activeEnvelopeId = activeEnvelope ? activeEnvelope.id : null
   const isAuthenticated = Boolean(currentUser)
+  const notes = useMemo(() => {
+    if (!currentFolderId || !currentUser) {
+      return []
+    }
+    return allNotes.filter((note) => note.categoryId === currentFolderId)
+  }, [allNotes, currentFolderId, currentUser])
 
   useEffect(() => {
     setCardFilter('all')
@@ -371,6 +478,228 @@ function App() {
       return searchable.includes(normalizedQuery)
     })
   }, [activeEnvelope, envelopeCards, query, cardFilter])
+
+  const categoriesByParent = useMemo(() => {
+    const grouped = new Map()
+
+    categories.forEach((category) => {
+      const key = category.parentId ?? '__root__'
+      const bucket = grouped.get(key) || []
+      bucket.push(category)
+      grouped.set(key, bucket)
+    })
+
+    grouped.forEach((bucket) => {
+      bucket.sort((a, b) => a.name.localeCompare(b.name))
+    })
+
+    return grouped
+  }, [categories])
+
+  const cardsByCategory = useMemo(() => {
+    const grouped = new Map()
+
+    decoratedCards.forEach((card) => {
+      const bucket = grouped.get(card.categoryId) || []
+      bucket.push(card)
+      grouped.set(card.categoryId, bucket)
+    })
+
+    return grouped
+  }, [decoratedCards])
+
+  const rootFolders = useMemo(() => categoriesByParent.get('__root__') || [], [categoriesByParent])
+  const envelopeCategories = useMemo(() => categories.filter((category) => category.parentId !== null), [categories])
+
+  const masteryStats = useMemo(() => {
+    const counts = cards.reduce(
+      (acc, card) => {
+        const status = card.masteryStatus || 'unknown'
+        acc[status] = (acc[status] || 0) + 1
+        return acc
+      },
+      { known: 0, review: 0, unknown: 0 }
+    )
+
+    const total = cards.length || 1
+
+    return {
+      knownCount: counts.known,
+      reviewCount: counts.review,
+      unknownCount: counts.unknown,
+      knownPercent: Math.round((counts.known / total) * 100),
+      reviewPercent: Math.round((counts.review / total) * 100),
+      unknownPercent: Math.round((counts.unknown / total) * 100)
+    }
+  }, [cards])
+
+  const priorityEnvelopes = useMemo(() => {
+    return envelopeCategories
+      .map((envelope) => {
+        const envelopeCardsList = cardsByCategory.get(envelope.id) || []
+        const reviewCount = envelopeCardsList.filter((card) => card.masteryStatus === 'review').length
+        const unknownCount = envelopeCardsList.filter((card) => (card.masteryStatus || 'unknown') === 'unknown').length
+        const knownCount = envelopeCardsList.filter((card) => card.masteryStatus === 'known').length
+        const pendingCount = reviewCount + unknownCount
+
+        return {
+          id: envelope.id,
+          name: envelope.name,
+          cardCount: envelopeCardsList.length,
+          reviewCount,
+          unknownCount,
+          knownCount,
+          pendingCount,
+          score: reviewCount * 2 + unknownCount
+        }
+      })
+      .filter((envelope) => envelope.cardCount > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score
+        if (b.pendingCount !== a.pendingCount) return b.pendingCount - a.pendingCount
+        return a.name.localeCompare(b.name)
+      })
+      .slice(0, 3)
+  }, [cardsByCategory, envelopeCategories])
+
+  const priorityEnvelope = priorityEnvelopes[0] || null
+
+  const folderProgress = useMemo(() => {
+    return rootFolders
+      .map((folder) => {
+        const childEnvelopes = categoriesByParent.get(folder.id) || []
+        const folderCardsList = [
+          ...(cardsByCategory.get(folder.id) || []),
+          ...childEnvelopes.flatMap((envelope) => cardsByCategory.get(envelope.id) || [])
+        ]
+
+        if (!folderCardsList.length) {
+          return null
+        }
+
+        const knownCount = folderCardsList.filter((card) => card.masteryStatus === 'known').length
+        const pendingCount = folderCardsList.filter((card) => (card.masteryStatus || 'unknown') !== 'known').length
+        const progress = Math.round((knownCount / folderCardsList.length) * 100)
+
+        return {
+          id: folder.id,
+          name: folder.name,
+          progress,
+          detail: `${childEnvelopes.length} enveloppe${childEnvelopes.length > 1 ? 's' : ''} · ${pendingCount} carte${pendingCount > 1 ? 's' : ''} à reprendre`
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.progress - a.progress || a.name.localeCompare(b.name))
+      .slice(0, 4)
+  }, [cardsByCategory, categoriesByParent, rootFolders])
+
+  const orderedFavoriteCategories = useMemo(
+    () => favorites.categories.map((id) => categoryMap.get(id)).filter(Boolean),
+    [favorites.categories, categoryMap]
+  )
+
+  const favoriteFolders = useMemo(() => {
+    return orderedFavoriteCategories
+      .filter((category) => category.parentId === null)
+      .slice(0, 3)
+      .map((folder) => {
+        const childEnvelopes = categoriesByParent.get(folder.id) || []
+        const folderCardCount =
+          (cardsByCategory.get(folder.id) || []).length +
+          childEnvelopes.reduce((sum, envelope) => sum + (cardsByCategory.get(envelope.id) || []).length, 0)
+
+        return {
+          ...folder,
+          meta: `${childEnvelopes.length} enveloppe${childEnvelopes.length > 1 ? 's' : ''} · ${folderCardCount} carte${folderCardCount > 1 ? 's' : ''}`
+        }
+      })
+  }, [cardsByCategory, categoriesByParent, orderedFavoriteCategories])
+
+  const favoriteEnvelopes = useMemo(() => {
+    return orderedFavoriteCategories
+      .filter((category) => category.parentId !== null)
+      .slice(0, 3)
+      .map((envelope) => {
+        const envelopeCardsList = cardsByCategory.get(envelope.id) || []
+        const pendingCount = envelopeCardsList.filter((card) => (card.masteryStatus || 'unknown') !== 'known').length
+
+        return {
+          ...envelope,
+          meta: `${pendingCount} carte${pendingCount > 1 ? 's' : ''} à reprendre`
+        }
+      })
+  }, [cardsByCategory, orderedFavoriteCategories])
+
+  const favoriteNotes = useMemo(() => {
+    return favorites.notes
+      .map((id) => noteMap.get(id))
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((note) => ({
+        ...note,
+        meta: formatRelativeDate(note.updatedAt || note.createdAt) || 'Ouvrir la note'
+      }))
+  }, [favorites.notes, noteMap])
+
+  const recentActivity = useMemo(() => {
+    return [
+      ...allNotes.map((note) => ({
+        id: note.id,
+        type: 'note',
+        label: note.title || 'Note sans titre',
+        meta: 'Note modifiée',
+        time: note.updatedAt || note.createdAt
+      })),
+      ...categories.map((category) => ({
+        id: category.id,
+        type: 'category',
+        label: category.name,
+        meta: category.parentId === null ? 'Dossier mis à jour' : 'Enveloppe mise à jour',
+        time: category.updatedAt || category.createdAt
+      })),
+      ...cards.map((card) => ({
+        id: card.id,
+        type: 'card',
+        label: card.question,
+        meta: `Carte · ${categoryMap.get(card.categoryId)?.name || 'Sans enveloppe'}`,
+        time: card.updatedAt || card.createdAt
+      }))
+    ]
+      .filter((item) => item.time)
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 4)
+      .map((item) => ({
+        ...item,
+        timeLabel: formatRelativeDate(item.time)
+      }))
+  }, [allNotes, cards, categories, categoryMap])
+
+  const dashboardStats = useMemo(() => {
+    const activeFolderLabel = rootFolders.length === 0
+      ? 'Aucun dossier pour le moment'
+      : `${rootFolders.length} dossier${rootFolders.length > 1 ? 's' : ''} à la racine`
+    const priorityEnvelopeLabel = priorityEnvelope
+      ? `${priorityEnvelope.name} en tête`
+      : 'Aucune priorité détectée'
+    const pendingCards = masteryStats.reviewCount + masteryStats.unknownCount
+    const pendingCardLabel = pendingCards > 0
+      ? `${pendingCards} carte${pendingCards > 1 ? 's' : ''} à retravailler`
+      : 'Tout est à jour'
+    const noteLabel = allNotes.length > 0
+      ? `${allNotes.length} note${allNotes.length > 1 ? 's' : ''} synchronisée${allNotes.length > 1 ? 's' : ''}`
+      : 'Aucune note enregistrée'
+
+    return {
+      folderCount: rootFolders.length,
+      envelopeCount: envelopeCategories.length,
+      cardCount: cards.length,
+      noteCount: allNotes.length,
+      activeFolderLabel,
+      priorityEnvelopeLabel,
+      pendingCardLabel,
+      noteLabel
+    }
+  }, [allNotes.length, cards.length, envelopeCategories.length, masteryStats.reviewCount, masteryStats.unknownCount, priorityEnvelope, rootFolders.length])
 
   const folderTrail = useMemo(() => {
     if (!selectedCategory) {
@@ -462,14 +791,38 @@ function App() {
     setNoteEditorState({ isOpen: false, note: null })
   }
 
+  const toggleCategoryFavorite = useCallback((categoryId) => {
+    setFavorites((current) => {
+      const exists = current.categories.includes(categoryId)
+      return {
+        ...current,
+        categories: exists
+          ? current.categories.filter((id) => id !== categoryId)
+          : [categoryId, ...current.categories]
+      }
+    })
+  }, [])
+
+  const toggleNoteFavorite = useCallback((noteId) => {
+    setFavorites((current) => {
+      const exists = current.notes.includes(noteId)
+      return {
+        ...current,
+        notes: exists
+          ? current.notes.filter((id) => id !== noteId)
+          : [noteId, ...current.notes]
+      }
+    })
+  }, [])
+
   const handleSaveNote = async (payload) => {
     try {
       if (noteEditorState.note) {
         const updated = await updateNote(noteEditorState.note.id, payload)
-        setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
+        setAllNotes((prev) => prev.map((note) => (note.id === updated.id ? updated : note)))
       } else {
         const created = await createNote({ ...payload, categoryId: currentFolderId })
-        setNotes((prev) => [created, ...prev])
+        setAllNotes((prev) => [created, ...prev])
       }
       closeNoteEditor()
     } catch (err) {
@@ -482,7 +835,7 @@ function App() {
     if (!window.confirm(`Supprimer la note "${note.title}" ?`)) return
     try {
       await deleteNote(note.id)
-      setNotes((prev) => prev.filter((n) => n.id !== note.id))
+      setAllNotes((prev) => prev.filter((item) => item.id !== note.id))
     } catch (err) {
       setNoticeTone('warning')
       setNotice(err.message || 'Impossible de supprimer la note.')
@@ -780,14 +1133,16 @@ function App() {
     setAuthForm((current) => ({ ...current, password: '' }))
   }
 
-  const startRevisionSession = () => {
-    if (!activeEnvelope) {
+  const startRevisionSession = useCallback((targetEnvelopeId = activeEnvelope?.id) => {
+    const envelope = targetEnvelopeId ? categoryMap.get(targetEnvelopeId) : activeEnvelope
+
+    if (!envelope) {
       setNoticeTone('warning')
       setNotice('Ouvrez une enveloppe pour lancer une révision.')
       return
     }
 
-    const sourceCards = envelopeCards
+    const sourceCards = cardsByCategory.get(envelope.id) || []
 
     if (!sourceCards.length) {
       setNoticeTone('warning')
@@ -808,9 +1163,9 @@ function App() {
       answered: 0,
       completed: false,
       envelopeName: activeEnvelope.name,
-      envelopeId: activeEnvelope.id
+      envelopeId: envelope.id
     })
-  }
+  }, [activeEnvelope, cardsByCategory, categoryMap, shuffleArray])
 
   const stopRevisionSession = useCallback(() => {
     setRevisionSession(defaultRevisionSession)
@@ -827,6 +1182,8 @@ function App() {
     setCardFilter('all')
     setCards([])
     setCategories([])
+    setAllNotes([])
+    setFavorites(defaultFavorites)
     setStatus('idle')
     setError('')
     setNotice('')
@@ -1054,10 +1411,14 @@ function App() {
   }, [activeEnvelope, handleCloseEnvelope])
 
   useEffect(() => {
-    if (!activeEnvelope && revisionSession.isOpen) {
+    if (!revisionSession.isOpen || currentFolderId === null) {
+      return
+    }
+
+    if (!activeEnvelope) {
       stopRevisionSession()
     }
-  }, [activeEnvelope, revisionSession.isOpen, stopRevisionSession])
+  }, [activeEnvelope, currentFolderId, revisionSession.isOpen, stopRevisionSession])
 
   const handleFloatingAction = () => {
     if (!isAuthenticated) {
