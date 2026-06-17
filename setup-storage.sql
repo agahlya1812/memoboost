@@ -1,37 +1,18 @@
--- Script pour configurer le stockage Supabase pour les images des cartes
--- À exécuter dans Supabase SQL Editor
+-- Stockage des images en SQLite
+-- Les fichiers sont stockés sur le filesystem ; cette table garde leurs métadonnées.
 
--- Créer le bucket pour les images des cartes
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'card-images',
-  'card-images',
-  true,
-  5242880, -- 5MB en bytes
-  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
-)
-ON CONFLICT (id) DO NOTHING;
-
--- Politique pour permettre aux utilisateurs authentifiés d'uploader leurs propres images
-CREATE POLICY "Users can upload their own card images" ON storage.objects
-FOR INSERT WITH CHECK (
-  auth.uid()::text = (storage.foldername(name))[1]
+CREATE TABLE IF NOT EXISTS storage_files (
+  id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bucket      TEXT NOT NULL DEFAULT 'card-images',
+  file_path   TEXT NOT NULL UNIQUE,
+  mime_type   TEXT,
+  size_bytes  INTEGER,
+  created_at  TEXT DEFAULT (datetime('now'))
 );
 
--- Politique pour permettre aux utilisateurs de voir leurs propres images
-CREATE POLICY "Users can view their own card images" ON storage.objects
-FOR SELECT USING (
-  auth.uid()::text = (storage.foldername(name))[1]
-);
+CREATE INDEX IF NOT EXISTS idx_storage_user   ON storage_files(user_id);
+CREATE INDEX IF NOT EXISTS idx_storage_bucket ON storage_files(bucket);
 
--- Politique pour permettre aux utilisateurs de supprimer leurs propres images
-CREATE POLICY "Users can delete their own card images" ON storage.objects
-FOR DELETE USING (
-  auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Politique pour permettre aux utilisateurs de mettre à jour leurs propres images
-CREATE POLICY "Users can update their own card images" ON storage.objects
-FOR UPDATE USING (
-  auth.uid()::text = (storage.foldername(name))[1]
-);
+-- Vérifier la table
+SELECT name, type FROM pragma_table_info('storage_files');

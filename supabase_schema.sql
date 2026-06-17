@@ -1,101 +1,58 @@
--- Schéma Supabase pour MemoBoost
--- À exécuter dans Supabase SQL Editor
+-- Schema SQLite pour MemoBoost
 
--- Extensions utiles
-create extension if not exists pgcrypto;
-
--- Tables
-create table if not exists public.categories (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  name text not null,
-  parent_id uuid null references public.categories(id) on delete set null,
-  color text default 'blue',
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+-- Table users (remplace auth.users de Supabase)
+CREATE TABLE IF NOT EXISTS users (
+  id       TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+  email    TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name     TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
 );
 
-create table if not exists public.cards (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  category_id uuid not null references public.categories(id) on delete cascade,
-  question text not null,
-  answer text not null,
-  mastery_status text default 'unknown',
-  image_url text null,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+CREATE TABLE IF NOT EXISTS categories (
+  id        TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+  user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name      TEXT NOT NULL,
+  parent_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+  color     TEXT DEFAULT 'blue',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS cards (
+  id             TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category_id    TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  question       TEXT NOT NULL,
+  answer         TEXT NOT NULL,
+  mastery_status TEXT DEFAULT 'unknown',
+  image_url      TEXT,
+  created_at     TEXT DEFAULT (datetime('now')),
+  updated_at     TEXT DEFAULT (datetime('now'))
 );
 
 -- Indexes
-create index if not exists idx_categories_user on public.categories(user_id);
-create index if not exists idx_categories_parent on public.categories(parent_id);
-create index if not exists idx_cards_user on public.cards(user_id);
-create index if not exists idx_cards_category on public.cards(category_id);
+CREATE INDEX IF NOT EXISTS idx_categories_user   ON categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_cards_user        ON cards(user_id);
+CREATE INDEX IF NOT EXISTS idx_cards_category    ON cards(category_id);
 
--- Trigger updated_at
-create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
+-- Triggers updated_at
+CREATE TRIGGER IF NOT EXISTS trg_users_updated_at
+AFTER UPDATE ON users FOR EACH ROW
+BEGIN
+  UPDATE users SET updated_at = datetime('now') WHERE id = OLD.id;
+END;
 
-drop trigger if exists trg_categories_updated_at on public.categories;
-create trigger trg_categories_updated_at
-before update on public.categories
-for each row execute function public.set_updated_at();
+CREATE TRIGGER IF NOT EXISTS trg_categories_updated_at
+AFTER UPDATE ON categories FOR EACH ROW
+BEGIN
+  UPDATE categories SET updated_at = datetime('now') WHERE id = OLD.id;
+END;
 
-drop trigger if exists trg_cards_updated_at on public.cards;
-create trigger trg_cards_updated_at
-before update on public.cards
-for each row execute function public.set_updated_at();
-
--- RLS
-alter table public.categories enable row level security;
-alter table public.cards enable row level security;
-
--- Policies Categories
-do $$ begin
-  create policy "categories_select_own" on public.categories
-    for select using (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "categories_insert_own" on public.categories
-    for insert with check (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "categories_update_own" on public.categories
-    for update using (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "categories_delete_own" on public.categories
-    for delete using (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
--- Policies Cards
-do $$ begin
-  create policy "cards_select_own" on public.cards
-    for select using (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "cards_insert_own" on public.cards
-    for insert with check (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "cards_update_own" on public.cards
-    for update using (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy "cards_delete_own" on public.cards
-    for delete using (auth.uid() = user_id);
-exception when duplicate_object then null; end $$;
-
-
+CREATE TRIGGER IF NOT EXISTS trg_cards_updated_at
+AFTER UPDATE ON cards FOR EACH ROW
+BEGIN
+  UPDATE cards SET updated_at = datetime('now') WHERE id = OLD.id;
+END;

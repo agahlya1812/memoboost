@@ -1,23 +1,7 @@
--- Script pour ajouter la colonne image_url à la table cards
--- À exécuter dans Supabase SQL Editor
+-- Ajouter la colonne image_url à la table cards (SQLite)
+-- Si la colonne existe déjà, cette commande retourne une erreur ignorable.
 
--- Ajouter la colonne image_url si elle n'existe pas
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 
-        FROM information_schema.columns 
-        WHERE table_name = 'cards' 
-        AND column_name = 'image_url'
-        AND table_schema = 'public'
-    ) THEN
-        ALTER TABLE public.cards ADD COLUMN image_url text null;
-    END IF;
-END $$;
+ALTER TABLE cards ADD COLUMN image_url TEXT;
 
 -- Vérifier que la colonne a été ajoutée
-SELECT column_name, data_type, is_nullable 
-FROM information_schema.columns 
-WHERE table_name = 'cards' 
-AND table_schema = 'public'
-ORDER BY ordinal_position;
+SELECT name, type FROM pragma_table_info('cards') WHERE name = 'image_url';
